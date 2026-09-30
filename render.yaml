@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: medicompanion
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PAYFAST_MERCHANT_ID
+        sync: false
+      - key: PAYFAST_MERCHANT_KEY
+        sync: false
+      - key: PEACH_PAYMENTS_ENTITY_ID
+        sync: false
+      - key: PEACH_PAYMENTS_PASSWORD
+        sync: false
+      - key: YOCO_SECRET_KEY
+        sync: false
+      - key: OZOW_SITE_CODE
+        sync: false
+      - key: OZOW_PRIVATE_KEY
+        sync: false
+      - key: PAYGATE_MERCHANT_ID
+        sync: false
+      - key: PAYGATE_ENCRYPTION_KEY
+        sync: false
+      - key: NETCASH_MERCHANT_ID
+        sync: false
+      - key: NETCASH_API_KEY
+        sync: false
+      - key: PAYMENT_SUCCESS_URL
+        value: https://medicompanion.onrender.com/payment/success
+      - key: PAYMENT_CANCEL_URL
+        value: https://medicompanion.onrender.com/payment/cancel
+      - key: PAYMENT_WEBHOOK_URL
+        value: https://medicompanion.onrender.com/api/payments/webhook
