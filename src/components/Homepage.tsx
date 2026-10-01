@@ -247,10 +247,9 @@ export const Homepage: React.FC<HomepageProps> = ({
             <span className="hidden md:inline">POPIA & HPCSA Compliant</span>
             <button
               onClick={() => onLaunchSuite('diary')}
-              className="font-semibold text-teal-300 hover:text-white underline underline-offset-2 flex items-center gap-1"
+              className="px-4 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-semibold text-[11px] transition shadow-sm"
             >
-              <span>Instant Live Demo</span>
-              <ChevronRight className="w-3 h-3" />
+              <span>Sign In</span>
             </button>
           </div>
         </div>

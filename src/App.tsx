@@ -307,6 +307,26 @@ export default function App() {
 
   return (
     <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <Homepage
+            onLaunchSuite={(view) => navigate(view === 'diary' ? '/dashboard' : `/${view || 'dashboard'}`)}
+            onOpenPatientPortal={() => navigate('/patient_portal')}
+            onOpenVoiceAssistant={() => navigate('/dashboard')}
+          />
+        </Suspense>
+      } />
+      <Route path="/home" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <Homepage
+            onLaunchSuite={(view) => navigate(view === 'diary' ? '/dashboard' : `/${view || 'dashboard'}`)}
+            onOpenPatientPortal={() => navigate('/patient_portal')}
+            onOpenVoiceAssistant={() => navigate('/dashboard')}
+          />
+        </Suspense>
+      } />
+
       {/* Auth Routes - Public */}
       <Route path="/login" element={<AuthLayout><SignInPage /></AuthLayout>} />
       <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
@@ -395,13 +415,6 @@ export default function App() {
           </TrialGateWrapper>
         </ProtectedRoute>
       }>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/home" element={<Homepage
-          onLaunchSuite={goToView}
-          onOpenPatientPortal={() => navigate('/patient_portal')}
-          onOpenVoiceAssistant={() => setShowVoiceModal(true)}
-          isTrialActive={true}
-        />} />
         <Route path="/dashboard" element={<Dashboard
           appointments={appointments}
           patients={patients}
@@ -520,8 +533,8 @@ export default function App() {
         />} />
       </Route>
 
-      {/* Unknown paths fall back to the dashboard */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Unknown paths fall back to the home page */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
