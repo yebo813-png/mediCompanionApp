@@ -1,30 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
-import { Dashboard } from './components/Dashboard';
-import { PracticeDiary } from './components/PracticeDiary';
-import { PatientList } from './components/PatientList';
-import { PatientOnboardingModal } from './components/PatientOnboardingModal';
-import { ConsultationSOAP } from './components/ConsultationSOAP';
-import { AIDiagnosticAssistant } from './components/AIDiagnosticAssistant';
-import { DigitalPenCanvas } from './components/DigitalPenCanvas';
-import { PrescriptionManager } from './components/PrescriptionManager';
-import { MedicalAidSwitch } from './components/MedicalAidSwitch';
-import { ReferralsHub } from './components/ReferralsHub';
-import { TelemedicineSuite } from './components/TelemedicineSuite';
-import { LocumTenensMarketplace } from './components/LocumTenensMarketplace';
-import { DoctorCPDTracker } from './components/DoctorCPDTracker';
-import { PatientPortalView } from './components/PatientPortalView';
-import { ComplianceAndFHIR } from './components/ComplianceAndFHIR';
-import { BillingOverview } from './components/BillingOverview';
 import { ModelSwitcherModal } from './components/ModelSwitcherModal';
-import { Homepage } from './components/Homepage';
-import {
-  DoctorVoiceAssistantModal,
-  DoctorVoiceOptInSettings,
-} from './components/DoctorVoiceAssistantModal';
+import { DoctorVoiceAssistantModal } from './components/DoctorVoiceAssistantModal';
 import { DoctorVoiceFloatingHUD } from './components/DoctorVoiceFloatingHUD';
-import { TryTrialModal, TrialSubscription } from './components/TryTrialModal';
+import { TrialGateModal } from './components/TrialGateModal';
+import { useAuth } from './context/AuthContext';
 import { PracticeStore } from './services/api';
 import { AIModelService, AIModelConfig } from './services/aiModelService';
 import {
@@ -40,60 +22,96 @@ import {
   NappiMedication,
 } from './types';
 
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const PracticeDiary = lazy(() => import('./components/PracticeDiary').then(m => ({ default: m.PracticeDiary })));
+const PatientList = lazy(() => import('./components/PatientList').then(m => ({ default: m.PatientList })));
+const ConsultationSOAP = lazy(() => import('./components/ConsultationSOAP').then(m => ({ default: m.ConsultationSOAP })));
+const DigitalPenCanvas = lazy(() => import('./components/DigitalPenCanvas').then(m => ({ default: m.DigitalPenCanvas })));
+const PrescriptionManager = lazy(() => import('./components/PrescriptionManager').then(m => ({ default: m.PrescriptionManager })));
+const MedicalAidSwitch = lazy(() => import('./components/MedicalAidSwitch').then(m => ({ default: m.MedicalAidSwitch })));
+const ReferralsHub = lazy(() => import('./components/ReferralsHub').then(m => ({ default: m.ReferralsHub })));
+const TelemedicineSuite = lazy(() => import('./components/TelemedicineSuite').then(m => ({ default: m.TelemedicineSuite })));
+const LocumTenensMarketplace = lazy(() => import('./components/LocumTenensMarketplace').then(m => ({ default: m.LocumTenensMarketplace })));
+const DoctorCPDTracker = lazy(() => import('./components/DoctorCPDTracker').then(m => ({ default: m.DoctorCPDTracker })));
+const PatientPortalView = lazy(() => import('./components/PatientPortalView').then(m => ({ default: m.PatientPortalView })));
+const ComplianceAndFHIR = lazy(() => import('./components/ComplianceAndFHIR').then(m => ({ default: m.ComplianceAndFHIR })));
+const BillingOverview = lazy(() => import('./components/BillingOverview').then(m => ({ default: m.BillingOverview })));
+const Homepage = lazy(() => import('./components/Homepage').then(m => ({ default: m.Homepage })));
+const AIDiagnosticAssistant = lazy(() => import('./components/AIDiagnosticAssistant').then(m => ({ default: m.AIDiagnosticAssistant })));
+const PatientOnboardingModal = lazy(() => import('./components/PatientOnboardingModal').then(m => ({ default: m.PatientOnboardingModal })));
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, initialized } = useAuth();
+  
+  if (loading || !initialized) {
+    return <LoadingFallback />;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
+  }
+  
+  return <>{children}</>;
+}
+
+function TrialGateWrapper({ children }: { children: React.ReactNode }) {
+  const { user, getTrialStatus, startTrial } = useAuth();
+  const [showTrialGate, setShowTrialGate] = useState(true);
+  const [trialChecked, setTrialChecked] = useState(false);
+
+  useEffect(() => {
+    const checkTrial = async () => {
+      if (user) {
+        const status = await getTrialStatus();
+        if (status.isOnTrial || status.subscriptionStatus === 'active') {
+          setShowTrialGate(false);
+        }
+        setTrialChecked(true);
+      } else {
+        setTrialChecked(true);
+      }
+    };
+    checkTrial();
+  }, [user, getTrialStatus]);
+
+  const handleTrialStarted = () => {
+    setShowTrialGate(false);
+  };
+
+  if (!trialChecked) {
+    return <LoadingFallback />;
+  }
+
+  if (showTrialGate) {
+    return (
+      <TrialGateModal
+        isOpen={true}
+        onClose={() => {}}
+        onTrialStarted={handleTrialStarted}
+      />
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
-  // Navigation & Mode
-  const [activeView, setActiveView] = useState<string>('home');
+  const { user, signOut } = useAuth();
+  const [activeView, setActiveView] = useState<string>('dashboard');
   const [isClientPortal, setIsClientPortal] = useState<boolean>(false);
   const [isVoiceActive, setIsVoiceActive] = useState<boolean>(false);
   const [activeAIModel, setActiveAIModel] = useState<AIModelConfig>(AIModelService.getActiveModel());
   const [showModelSwitcher, setShowModelSwitcher] = useState<boolean>(false);
-
-  // 7-Day Credit Card Trial & Subscription State
-  const [showTrialModal, setShowTrialModal] = useState<boolean>(false);
-  const [trialSubscription, setTrialSubscription] = useState<TrialSubscription>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('doctor_practice_trial_subscription');
-        if (saved) {
-          const parsed: TrialSubscription = JSON.parse(saved);
-          if (parsed.isActive && parsed.endDate) {
-            const msDiff = new Date(parsed.endDate).getTime() - Date.now();
-            const daysLeft = Math.max(0, Math.ceil(msDiff / (1000 * 60 * 60 * 24)));
-            return {
-              ...parsed,
-              daysRemaining: daysLeft,
-            };
-          }
-          return parsed;
-        }
-      } catch (err) {
-        console.error('Failed to parse trial subscription from localStorage', err);
-      }
-    }
-    return {
-      isActive: false,
-      status: 'NOT_STARTED',
-      startDate: '',
-      endDate: '',
-      daysRemaining: 7,
-      planId: 'professional',
-      planName: 'Professional Practice',
-      billingCycle: 'monthly',
-      monthlyPriceZar: 2190,
-      gateway: 'paystack',
-      is3DS2Verified: false,
-      isExtended3Days: false,
-      cardDetails: null,
-      autoRenew: true,
-      deactivatedAt: null,
-    };
-  });
-
-  const isTrialActive = trialSubscription.isActive;
-
-  // Doctor AI Voice Assistant (Gemini 3.8 Live) & Opt-in Reminders State
   const [showVoiceModal, setShowVoiceModal] = useState<boolean>(false);
-  const [voiceOptInSettings, setVoiceOptInSettings] = useState<DoctorVoiceOptInSettings>({
+  const [voiceOptInSettings, setVoiceOptInSettings] = useState({
     isEnabled: true,
     alertAllergies: true,
     alertWaitingDelays: true,
@@ -106,90 +124,7 @@ export default function App() {
   });
   const [lastSpokenReminder, setLastSpokenReminder] = useState<string | null>(null);
   const [isVoiceAssistantSpeaking, setIsVoiceAssistantSpeaking] = useState<boolean>(false);
-
-  const triggerVoiceReminder = (text: string) => {
-    if (!voiceOptInSettings.isEnabled) return;
-    setLastSpokenReminder(text);
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.volume = voiceOptInSettings.soundVolume;
-      utt.rate = 1.05;
-      utt.pitch =
-        voiceOptInSettings.voicePersona === 'Fenrir'
-          ? 0.85
-          : voiceOptInSettings.voicePersona === 'Puck'
-          ? 1.15
-          : 1.0;
-      utt.onstart = () => setIsVoiceAssistantSpeaking(true);
-      utt.onend = () => setIsVoiceAssistantSpeaking(false);
-      utt.onerror = () => setIsVoiceAssistantSpeaking(false);
-      window.speechSynthesis.speak(utt);
-    }
-  };
-
-  const handleActivateTrial = (sub: TrialSubscription) => {
-    setTrialSubscription(sub);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('doctor_practice_trial_subscription', JSON.stringify(sub));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    triggerVoiceReminder(
-      'Congratulations Dr. Ndlovu. Your 7-day full features practice trial is now active. All production tools are unlocked.'
-    );
-  };
-
-  const handleDeactivateTrial = () => {
-    const updated: TrialSubscription = {
-      ...trialSubscription,
-      isActive: false,
-      status: 'CANCELLED_BEFORE_CHARGE',
-      autoRenew: false,
-      deactivatedAt: new Date().toISOString(),
-    };
-    setTrialSubscription(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('doctor_practice_trial_subscription', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    triggerVoiceReminder(
-      'Your trial has been deactivated. You will not be charged. Thank you for evaluating the platform.'
-    );
-  };
-
-  const handleExtendTrial3Days = () => {
-    if (!trialSubscription.isActive) return;
-    const currentEnd = new Date(trialSubscription.endDate || Date.now());
-    const newEnd = new Date(currentEnd.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const updated: TrialSubscription = {
-      ...trialSubscription,
-      endDate: newEnd.toISOString(),
-      daysRemaining: trialSubscription.daysRemaining + 3,
-      isExtended3Days: true,
-    };
-    setTrialSubscription(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('doctor_practice_trial_subscription', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    PracticeStore.addAuditLog(
-      'TRIAL_EXTENSION_GRANTED',
-      `Dr. Ndlovu extended full feature trial by 3 days. New billing date: ${newEnd.toLocaleDateString('en-ZA')}`
-    );
-    setAuditLogs(PracticeStore.getAuditLogs());
-    triggerVoiceReminder(
-      `Your practice trial has been extended by 3 days for free. Your new renewal date is ${newEnd.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long' })}.`
-    );
-  };
+  const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
 
   // Core Data
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -206,7 +141,6 @@ export default function App() {
   // Inter-view data pass-through
   const [presetClaimData, setPresetClaimData] = useState<any>(null);
   const [presetRxItems, setPresetRxItems] = useState<NappiMedication[]>([]);
-  const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
 
   // Initialize data from local store
   useEffect(() => {
@@ -223,19 +157,27 @@ export default function App() {
     setAuditLogs(PracticeStore.getAuditLogs());
   }, []);
 
-  // Handlers
+  const triggerVoiceReminder = (text: string) => {
+    if (!voiceOptInSettings.isEnabled) return;
+    setLastSpokenReminder(text);
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.volume = voiceOptInSettings.soundVolume;
+      utt.rate = 1.05;
+      utt.pitch = voiceOptInSettings.voicePersona === 'Fenrir' ? 0.85 : voiceOptInSettings.voicePersona === 'Puck' ? 1.15 : 1.0;
+      utt.onstart = () => setIsVoiceAssistantSpeaking(true);
+      utt.onend = () => setIsVoiceAssistantSpeaking(false);
+      utt.onerror = () => setIsVoiceAssistantSpeaking(false);
+      window.speechSynthesis.speak(utt);
+    }
+  };
+
   const handleSelectPatient = (patient: Patient) => {
     setSelectedPatient(patient);
     setActiveView('patients');
-    if (
-      voiceOptInSettings.isEnabled &&
-      voiceOptInSettings.alertAllergies &&
-      patient.allergies &&
-      patient.allergies.length > 0
-    ) {
-      triggerVoiceReminder(
-        `Dr. Ndlovu, safety alert: ${patient.fullName} has a recorded allergy to ${patient.allergies.join(', ')}.`
-      );
+    if (voiceOptInSettings.isEnabled && voiceOptInSettings.alertAllergies && patient.allergies?.length > 0) {
+      triggerVoiceReminder(`Dr. Ndlovu, safety alert: ${patient.fullName} has a recorded allergy to ${patient.allergies.join(', ')}.`);
     }
   };
 
@@ -243,30 +185,16 @@ export default function App() {
     const matchedPatient = patients.find((p) => p.id === apt.patientId) || patients[0];
     setSelectedPatient(matchedPatient);
     setActiveView('consult');
-    if (
-      voiceOptInSettings.isEnabled &&
-      voiceOptInSettings.alertAllergies &&
-      matchedPatient.allergies &&
-      matchedPatient.allergies.length > 0
-    ) {
-      triggerVoiceReminder(
-        `Dr. Ndlovu, safety alert: ${matchedPatient.fullName} has a documented allergy to ${matchedPatient.allergies.join(', ')}.`
-      );
+    if (voiceOptInSettings.isEnabled && voiceOptInSettings.alertAllergies && matchedPatient.allergies?.length > 0) {
+      triggerVoiceReminder(`Dr. Ndlovu, safety alert: ${matchedPatient.fullName} has a documented allergy to ${matchedPatient.allergies.join(', ')}.`);
     }
   };
 
   const handleStartConsultationForPatient = (patient: Patient) => {
     setSelectedPatient(patient);
     setActiveView('consult');
-    if (
-      voiceOptInSettings.isEnabled &&
-      voiceOptInSettings.alertAllergies &&
-      patient.allergies &&
-      patient.allergies.length > 0
-    ) {
-      triggerVoiceReminder(
-        `Dr. Ndlovu, safety alert: ${patient.fullName} has a documented allergy to ${patient.allergies.join(', ')}.`
-      );
+    if (voiceOptInSettings.isEnabled && voiceOptInSettings.alertAllergies && patient.allergies?.length > 0) {
+      triggerVoiceReminder(`Dr. Ndlovu, safety alert: ${patient.fullName} has a documented allergy to ${patient.allergies.join(', ')}.`);
     }
   };
 
@@ -314,7 +242,6 @@ export default function App() {
     const updated = PracticeStore.saveLocum({ ...target, status: 'CONFIRMED' });
     setLocumSlots(updated);
 
-    // Sync into appointments
     const locumApt: Appointment = {
       id: `apt-locum-${Date.now()}`,
       patientId: 'pat-locum-slot',
@@ -366,7 +293,6 @@ export default function App() {
     setActiveView('locum');
   };
 
-  // Badge counts
   const waitingCount = appointments.filter(
     (a) => a.date === new Date().toISOString().slice(0, 10) && (a.status === 'Arrived' || a.status === 'In Consultation')
   ).length;
@@ -376,310 +302,384 @@ export default function App() {
   const urgentCount = appointments.filter((a) => a.triageLevel === 'Urgent' || a.triageLevel === 'Emergency').length || 1;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-teal-500 selection:text-white transition-colors duration-150">
-      {/* Top Header */}
+    <Routes>
+      {/* Auth Routes - Public */}
+      <Route path="/login" element={<AuthLayout><SignInPage /></AuthLayout>} />
+      <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+      <Route path="/forgot-password" element={<AuthLayout><ForgotPasswordPage /></AuthLayout>} />
+      <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+
+      {/* Protected Routes - Require Auth + Trial */}
+      <Route element={
+        <ProtectedRoute>
+          <TrialGateWrapper>
+            <AppLayout>
+              <AppRoutes />
+            </AppLayout>
+          </TrialGateWrapper>
+        </ProtectedRoute>
+      }>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardRoute />} />
+        <Route path="/diary" element={<DiaryRoute />} />
+        <Route path="/patients" element={<PatientsRoute />} />
+        <Route path="/diagnostic" element={<DiagnosticRoute />} />
+        <Route path="/consult" element={<ConsultRoute />} />
+        <Route path="/pen" element={<PenRoute />} />
+        <Route path="/rx" element={<RxRoute />} />
+        <Route path="/switch" element={<SwitchRoute />} />
+        <Route path="/billing" element={<BillingRoute />} />
+        <Route path="/referrals" element={<ReferralsRoute />} />
+        <Route path="/telehealth" element={<TelehealthRoute />} />
+        <Route path="/locum" element={<LocumRoute />} />
+        <Route path="/cpd" element={<CPDRoute />} />
+        <Route path="/compliance" element={<ComplianceRoute />} />
+        <Route path="/patient_portal" element={<PatientPortalRoute />} />
+      </Route>
+
+      {/* Modals (outside routes) */}
+      <Route path="*">
+        <GlobalModals />
+      </Route>
+    </Routes>
+  );
+}
+
+// Layout Components
+function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-slate-950">
+      {children}
+    </div>
+  );
+}
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [activeView, setActiveView] = useState<string>('dashboard');
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
       <Header
         activeView={activeView}
         setActiveView={setActiveView}
-        isClientPortal={isClientPortal}
-        setIsClientPortal={setIsClientPortal}
-        patients={patients}
-        onSelectPatient={handleSelectPatient}
-        isVoiceActive={isVoiceActive}
-        setIsVoiceActive={setIsVoiceActive}
-        isTrialActive={isTrialActive}
-        onActivateTrial={() => setShowTrialModal(true)}
-        onOpenTrialModal={() => setShowTrialModal(true)}
-        trialDaysRemaining={trialSubscription.daysRemaining}
+        isClientPortal={false}
+        setIsClientPortal={() => {}}
+        patients={[]}
+        onSelectPatient={() => {}}
+        isVoiceActive={false}
+        setIsVoiceActive={() => {}}
+        isTrialActive={true}
+        onActivateTrial={() => {}}
+        onOpenTrialModal={() => {}}
+        trialDaysRemaining={7}
         activeModel={activeAIModel}
         onOpenModelSwitcher={() => setShowModelSwitcher(true)}
         isVoiceOptedIn={voiceOptInSettings.isEnabled}
         onOpenVoiceAssistant={() => setShowVoiceModal(true)}
       />
 
-      {/* Navigation Bar (When in Doctor Suite) */}
-      {!isClientPortal && (
-        <Navigation
-          activeView={activeView}
-          setActiveView={setActiveView}
-          waitingCount={waitingCount}
-          openClaimsCount={openClaimsCount}
-          pendingLocumCount={pendingLocumCount}
-          urgentCount={urgentCount}
-        />
-      )}
+      <Navigation
+        activeView={activeView}
+        setActiveView={setActiveView}
+        waitingCount={waitingCount}
+        openClaimsCount={openClaimsCount}
+        pendingLocumCount={pendingLocumCount}
+        urgentCount={urgentCount}
+      />
 
-      {/* 7-Day Live Switch Trial Banner with CPA §14 Notice & Extension (Recommendations 1, 2, 3, 4) */}
-      {isTrialActive && !isClientPortal && (
-        <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-cyan-950 border-b border-teal-800/80 px-4 py-2.5 text-xs text-slate-200">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5">
-            <div className="flex items-center space-x-2.5 flex-wrap">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
-              </span>
-              <span className="font-bold text-white">
-                7-Day Live Switch & AI Trial:
-              </span>
-              <span className="text-teal-300 font-mono font-semibold">
-                {trialSubscription.daysRemaining} days remaining
-              </span>
-              <span className="text-slate-400 text-[11px] hidden sm:inline">
-                (Renews {new Date(trialSubscription.endDate || Date.now()).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })} at R{trialSubscription.monthlyPriceZar.toLocaleString()}/mo)
-              </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center space-x-1">
-                <span>Paystack 3DS2 Verified</span>
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-2 shrink-0">
-              {!trialSubscription.isExtended3Days && (
-                <button
-                  type="button"
-                  onClick={handleExtendTrial3Days}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] transition cursor-pointer"
-                  title="Need more time to test with reception? Extend trial by 3 days for free."
-                >
-                  +3 Days Grace Extension
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowTrialModal(true)}
-                className="px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-bold text-[11px] transition cursor-pointer"
-              >
-                Manage / 1-Click Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <main className={`flex-1 w-full ${activeView === 'home' ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'}`}>
-        {isClientPortal || activeView === 'patient_portal' ? (
-          <PatientPortalView
-            currentPatient={selectedPatient}
-            patients={patients}
-            reminders={reminders}
-            onToggleTaken={handleToggleReminderTaken}
-            onRequestRefill={handleRequestRefill}
-            onOpenTelehealth={() => {
-              setIsClientPortal(false);
-              setActiveView('telehealth');
-            }}
-          />
-        ) : (
-          <>
-            {activeView === 'home' && (
-              <Homepage
-                onLaunchSuite={(targetView = 'diary') => setActiveView(targetView)}
-                onOpenPatientPortal={() => {
-                  setIsClientPortal(true);
-                  setActiveView('patient_portal');
-                }}
-                onOpenTrialModal={() => setShowTrialModal(true)}
-                isTrialActive={isTrialActive}
-                onOpenVoiceAssistant={() => setShowVoiceModal(true)}
-              />
-            )}
-
-            {activeView === 'dashboard' && (
-              <Dashboard
-                appointments={appointments}
-                patients={patients}
-                consultations={consultations}
-                claims={claims}
-                locumSlots={locumSlots}
-                onStartConsultation={handleStartConsultationFromAppointment}
-                onOpenPatientFile={(p) => {
-                  setSelectedPatient(p);
-                  setActiveView('patients');
-                }}
-                onOpenTelehealth={() => setActiveView('telehealth')}
-                onOpenSwitch={() => setActiveView('switch')}
-                onOpenBillingOverview={() => setActiveView('billing')}
-                onOpenNewPatientModal={() => setShowOnboardingModal(true)}
-                onUpdateAppointmentStatus={(aptId, newStatus) => {
-                  const apt = appointments.find((a) => a.id === aptId);
-                  if (apt) {
-                    handleBookAppointment({ ...apt, status: newStatus });
-                  }
-                }}
-              />
-            )}
-
-            {activeView === 'diary' && (
-              <PracticeDiary
-                appointments={appointments}
-                patients={patients}
-                onStartConsultation={handleStartConsultationFromAppointment}
-                onBookAppointment={handleBookAppointment}
-                onRequestLocum={handleRequestLocumFromDiary}
-                onOpenPatientFile={(p) => {
-                  setSelectedPatient(p);
-                  setActiveView('patients');
-                }}
-                onOpenTelehealth={() => setActiveView('telehealth')}
-                onOpenSwitch={() => setActiveView('switch')}
-                onOpenBillingOverview={() => setActiveView('billing')}
-                isVoiceActiveGlobal={isVoiceActive}
-                setIsVoiceActiveGlobal={setIsVoiceActive}
-                isTrialActive={isTrialActive}
-                onActivateTrial={() => setShowTrialModal(true)}
-              />
-            )}
-
-            {activeView === 'patients' && (
-              <PatientList
-                patients={patients}
-                onSelectPatient={(p) => setSelectedPatient(p)}
-                onOpenOnboarding={() => setShowOnboardingModal(true)}
-                onStartConsultationForPatient={handleStartConsultationForPatient}
-                onOpenSwitchForPatient={(p) => {
-                  setSelectedPatient(p);
-                  setActiveView('switch');
-                }}
-              />
-            )}
-
-            {activeView === 'diagnostic' && (
-              <AIDiagnosticAssistant
-                currentPatient={selectedPatient}
-                patients={patients}
-                onSelectPatient={(p) => setSelectedPatient(p)}
-                onCommitToPatientFile={(diag, plan, meds) => {
-                  if (selectedPatient) {
-                    const updatedPat = {
-                      ...selectedPatient,
-                      tags: [...new Set([...selectedPatient.tags, 'AI Diagnosis Confirmed', diag.split(' ')[0]])],
-                    };
-                    handleSavePatient(updatedPat);
-                  }
-                  if (meds.length > 0) {
-                    setPresetRxItems(meds);
-                  }
-                }}
-                onOpenPrescriptionPad={(meds) => {
-                  setPresetRxItems(meds);
-                  setActiveView('rx');
-                }}
-              />
-            )}
-
-            {activeView === 'consult' && (
-              <ConsultationSOAP
-                currentPatient={selectedPatient}
-                patients={patients}
-                onSelectPatient={(p) => setSelectedPatient(p)}
-                onOpenSwitchWithClaim={handleOpenSwitchWithClaim}
-                onOpenRxWithItems={handleOpenRxWithItems}
-                isVoiceActiveGlobal={isVoiceActive}
-              />
-            )}
-
-            {activeView === 'pen' && (
-              <DigitalPenCanvas
-                currentPatient={selectedPatient}
-                onApplyTranscribedNotes={handleApplyTranscribedNotes}
-              />
-            )}
-
-            {activeView === 'rx' && (
-              <PrescriptionManager
-                currentPatient={selectedPatient}
-                initialItems={presetRxItems}
-              />
-            )}
-
-            {activeView === 'switch' && (
-              <MedicalAidSwitch
-                claims={claims}
-                patients={patients}
-                onClaimCreated={handleClaimCreated}
-                presetClaimData={presetClaimData}
-              />
-            )}
-
-            {activeView === 'billing' && (
-              <BillingOverview
-                claims={claims}
-                patients={patients}
-                onOpenSwitch={() => setActiveView('switch')}
-                onSelectClaim={(claim) => {
-                  setPresetClaimData(claim);
-                  setActiveView('switch');
-                }}
-                isTrialActive={isTrialActive}
-                onActivateTrial={() => setShowTrialModal(true)}
-              />
-            )}
-
-            {activeView === 'referrals' && (
-              <ReferralsHub
-                referrals={referrals}
-                patients={patients}
-                onReferralCreated={handleReferralCreated}
-              />
-            )}
-
-            {activeView === 'telehealth' && (
-              <TelemedicineSuite
-                currentPatient={selectedPatient}
-                patients={patients}
-                onSelectPatient={(p) => setSelectedPatient(p)}
-                onBookVirtualAppointment={handleBookAppointment}
-                onOpenConsultationNotes={(p) => {
-                  setSelectedPatient(p);
-                  setActiveView('consult');
-                }}
-              />
-            )}
-
-            {activeView === 'locum' && (
-              <LocumTenensMarketplace
-                locumSlots={locumSlots}
-                onAddLocumSlot={handleAddLocumSlot}
-                onConfirmLocum={handleConfirmLocum}
-              />
-            )}
-
-            {activeView === 'cpd' && (
-              <DoctorCPDTracker
-                cpdCertificates={cpdCerts}
-                onAddCertificate={handleAddCertificate}
-              />
-            )}
-
-            {activeView === 'compliance' && (
-              <ComplianceAndFHIR
-                currentPatient={selectedPatient}
-                patients={patients}
-                auditLogs={auditLogs}
-              />
-            )}
-          </>
-        )}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Suspense fallback={<LoadingFallback />}>
+          {children}
+        </Suspense>
       </main>
+    </div>
+  );
+}
 
-      {/* Patient Onboarding Modal */}
+function AppRoutes() {
+  return (
+    <>
+      {activeView === 'dashboard' && <Dashboard
+        appointments={appointments}
+        patients={patients}
+        consultations={consultations}
+        claims={claims}
+        locumSlots={locumSlots}
+        onStartConsultation={handleStartConsultationFromAppointment}
+        onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
+        onOpenTelehealth={() => setActiveView('telehealth')}
+        onOpenSwitch={() => setActiveView('switch')}
+        onOpenBillingOverview={() => setActiveView('billing')}
+        onOpenNewPatientModal={() => setShowOnboardingModal(true)}
+        onUpdateAppointmentStatus={(aptId, newStatus) => {
+          const apt = appointments.find((a) => a.id === aptId);
+          if (apt) handleBookAppointment({ ...apt, status: newStatus });
+        }}
+      />}
+
+      {activeView === 'diary' && <PracticeDiary
+        appointments={appointments}
+        patients={patients}
+        onStartConsultation={handleStartConsultationFromAppointment}
+        onBookAppointment={handleBookAppointment}
+        onRequestLocum={handleRequestLocumFromDiary}
+        onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
+        onOpenTelehealth={() => setActiveView('telehealth')}
+        onOpenSwitch={() => setActiveView('switch')}
+        onOpenBillingOverview={() => setActiveView('billing')}
+        isVoiceActiveGlobal={isVoiceActive}
+        setIsVoiceActiveGlobal={setIsVoiceActive}
+        isTrialActive={true}
+        onActivateTrial={() => {}}
+      />}
+
+      {activeView === 'patients' && <PatientList
+        patients={patients}
+        onSelectPatient={handleSelectPatient}
+        onOpenOnboarding={() => setShowOnboardingModal(true)}
+        onStartConsultationForPatient={handleStartConsultationForPatient}
+        onOpenSwitchForPatient={(p) => { setSelectedPatient(p); setActiveView('switch'); }}
+      />}
+
+      {activeView === 'diagnostic' && <AIDiagnosticAssistant
+        currentPatient={selectedPatient}
+        patients={patients}
+        onSelectPatient={(p) => setSelectedPatient(p)}
+        onCommitToPatientFile={(diag, plan, meds) => {
+          if (selectedPatient) {
+            const updatedPat = { ...selectedPatient, tags: [...new Set([...selectedPatient.tags, 'AI Diagnosis Confirmed', diag.split(' ')[0]])] };
+            handleSavePatient(updatedPat);
+          }
+          if (meds.length > 0) { setPresetRxItems(meds); }
+        }}
+        onOpenPrescriptionPad={(meds) => { setPresetRxItems(meds); setActiveView('rx'); }}
+      />}
+
+      {activeView === 'consult' && <ConsultationSOAP
+        currentPatient={selectedPatient}
+        patients={patients}
+        onSelectPatient={(p) => setSelectedPatient(p)}
+        onOpenSwitchWithClaim={handleOpenSwitchWithClaim}
+        onOpenRxWithItems={handleOpenRxWithItems}
+        isVoiceActiveGlobal={isVoiceActive}
+      />}
+
+      {activeView === 'pen' && <DigitalPenCanvas
+        currentPatient={selectedPatient}
+        onApplyTranscribedNotes={handleApplyTranscribedNotes}
+      />}
+
+      {activeView === 'rx' && <PrescriptionManager
+        currentPatient={selectedPatient}
+        initialItems={presetRxItems}
+      />}
+
+      {activeView === 'switch' && <MedicalAidSwitch
+        claims={claims}
+        patients={patients}
+        onClaimCreated={handleClaimCreated}
+        presetClaimData={presetClaimData}
+      />}
+
+      {activeView === 'billing' && <BillingOverview
+        claims={claims}
+        patients={patients}
+        onOpenSwitch={() => setActiveView('switch')}
+        onSelectClaim={(claim) => { setPresetClaimData(claim); setActiveView('switch'); }}
+        isTrialActive={true}
+        onActivateTrial={() => {}}
+      />}
+
+      {activeView === 'referrals' && <ReferralsHub
+        referrals={referrals}
+        patients={patients}
+        onReferralCreated={handleReferralCreated}
+      />}
+
+      {activeView === 'telehealth' && <TelemedicineSuite
+        currentPatient={selectedPatient}
+        patients={patients}
+        onSelectPatient={(p) => setSelectedPatient(p)}
+        onBookVirtualAppointment={handleBookAppointment}
+        onOpenConsultationNotes={(p) => { setSelectedPatient(p); setActiveView('consult'); }}
+      />}
+
+      {activeView === 'locum' && <LocumTenensMarketplace
+        locumSlots={locumSlots}
+        onAddLocumSlot={handleAddLocumSlot}
+        onConfirmLocum={handleConfirmLocum}
+      />}
+
+      {activeView === 'cpd' && <DoctorCPDTracker
+        cpdCertificates={cpdCerts}
+        onAddCertificate={handleAddCertificate}
+      />}
+
+      {activeView === 'compliance' && <ComplianceAndFHIR
+        currentPatient={selectedPatient}
+        patients={patients}
+        auditLogs={auditLogs}
+      />}
+
+      {activeView === 'patient_portal' && <PatientPortalView
+        currentPatient={selectedPatient}
+        patients={patients}
+        reminders={reminders}
+        onToggleTaken={handleToggleReminderTaken}
+        onRequestRefill={handleRequestRefill}
+        onOpenTelehealth={() => setActiveView('telehealth')}
+      />}
+    </>
+  );
+}
+
+// Route Components
+function DashboardRoute() { return <Dashboard
+  appointments={appointments}
+  patients={patients}
+  consultations={consultations}
+  claims={claims}
+  locumSlots={locumSlots}
+  onStartConsultation={handleStartConsultationFromAppointment}
+  onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
+  onOpenTelehealth={() => setActiveView('telehealth')}
+  onOpenSwitch={() => setActiveView('switch')}
+  onOpenBillingOverview={() => setActiveView('billing')}
+  onOpenNewPatientModal={() => setShowOnboardingModal(true)}
+  onUpdateAppointmentStatus={(aptId, newStatus) => {
+    const apt = appointments.find((a) => a.id === aptId);
+    if (apt) handleBookAppointment({ ...apt, status: newStatus });
+  }}
+/>; }
+
+function DiaryRoute() { return <PracticeDiary
+  appointments={appointments}
+  patients={patients}
+  onStartConsultation={handleStartConsultationFromAppointment}
+  onBookAppointment={handleBookAppointment}
+  onRequestLocum={handleRequestLocumFromDiary}
+  onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
+  onOpenTelehealth={() => setActiveView('telehealth')}
+  onOpenSwitch={() => setActiveView('switch')}
+  onOpenBillingOverview={() => setActiveView('billing')}
+  isVoiceActiveGlobal={isVoiceActive}
+  setIsVoiceActiveGlobal={setIsVoiceActive}
+  isTrialActive={true}
+  onActivateTrial={() => {}}
+/>; }
+
+function PatientsRoute() { return <PatientList
+  patients={patients}
+  onSelectPatient={handleSelectPatient}
+  onOpenOnboarding={() => setShowOnboardingModal(true)}
+  onStartConsultationForPatient={handleStartConsultationForPatient}
+  onOpenSwitchForPatient={(p) => { setSelectedPatient(p); setActiveView('switch'); }}
+/>; }
+
+function DiagnosticRoute() { return <AIDiagnosticAssistant
+  currentPatient={selectedPatient}
+  patients={patients}
+  onSelectPatient={(p) => setSelectedPatient(p)}
+  onCommitToPatientFile={(diag, plan, meds) => {
+    if (selectedPatient) {
+      const updatedPat = { ...selectedPatient, tags: [...new Set([...selectedPatient.tags, 'AI Diagnosis Confirmed', diag.split(' ')[0]])] };
+      handleSavePatient(updatedPat);
+    }
+    if (meds.length > 0) { setPresetRxItems(meds); }
+  }}
+  onOpenPrescriptionPad={(meds) => { setPresetRxItems(meds); setActiveView('rx'); }}
+/>; }
+
+function ConsultRoute() { return <ConsultationSOAP
+  currentPatient={selectedPatient}
+  patients={patients}
+  onSelectPatient={(p) => setSelectedPatient(p)}
+  onOpenSwitchWithClaim={handleOpenSwitchWithClaim}
+  onOpenRxWithItems={handleOpenRxWithItems}
+  isVoiceActiveGlobal={isVoiceActive}
+/>; }
+
+function PenRoute() { return <DigitalPenCanvas
+  currentPatient={selectedPatient}
+  onApplyTranscribedNotes={handleApplyTranscribedNotes}
+/>; }
+
+function RxRoute() { return <PrescriptionManager
+  currentPatient={selectedPatient}
+  initialItems={presetRxItems}
+/>; }
+
+function SwitchRoute() { return <MedicalAidSwitch
+  claims={claims}
+  patients={patients}
+  onClaimCreated={handleClaimCreated}
+  presetClaimData={presetClaimData}
+/>; }
+
+function BillingRoute() { return <BillingOverview
+  claims={claims}
+  patients={patients}
+  onOpenSwitch={() => setActiveView('switch')}
+  onSelectClaim={(claim) => { setPresetClaimData(claim); setActiveView('switch'); }}
+  isTrialActive={true}
+  onActivateTrial={() => {}}
+/>; }
+
+function ReferralsRoute() { return <ReferralsHub
+  referrals={referrals}
+  patients={patients}
+  onReferralCreated={handleReferralCreated}
+/>; }
+
+function TelehealthRoute() { return <TelemedicineSuite
+  currentPatient={selectedPatient}
+  patients={patients}
+  onSelectPatient={(p) => setSelectedPatient(p)}
+  onBookVirtualAppointment={handleBookAppointment}
+  onOpenConsultationNotes={(p) => { setSelectedPatient(p); setActiveView('consult'); }}
+/>; }
+
+function LocumRoute() { return <LocumTenensMarketplace
+  locumSlots={locumSlots}
+  onAddLocumSlot={handleAddLocumSlot}
+  onConfirmLocum={handleConfirmLocum}
+/>; }
+
+function CPDRoute() { return <DoctorCPDTracker
+  cpdCertificates={cpdCerts}
+  onAddCertificate={handleAddCertificate}
+/>; }
+
+function ComplianceRoute() { return <ComplianceAndFHIR
+  currentPatient={selectedPatient}
+  patients={patients}
+  auditLogs={auditLogs}
+/>; }
+
+function PatientPortalRoute() { return <PatientPortalView
+  currentPatient={selectedPatient}
+  patients={patients}
+  reminders={reminders}
+  onToggleTaken={handleToggleReminderTaken}
+  onRequestRefill={handleRequestRefill}
+  onOpenTelehealth={() => setActiveView('telehealth')}
+/>; }
+
+function GlobalModals() {
+  return (
+    <>
       <PatientOnboardingModal
         isOpen={showOnboardingModal}
         onClose={() => setShowOnboardingModal(false)}
         onSavePatient={handleSavePatient}
       />
-
-      {/* AI Model Switcher Modal (Free Gemini Tier, Open-Source & Custom Providers) */}
       <ModelSwitcherModal
         isOpen={showModelSwitcher}
         onClose={() => setShowModelSwitcher(false)}
         activeModel={activeAIModel}
-        onSelectModel={(m) => {
-          setActiveAIModel(m);
-        }}
+        onSelectModel={(m) => { setActiveAIModel(m); }}
       />
-
-      {/* Doctor AI Voice Assistant Modal (Gemini 3.8 Live & Opt-In Reminders) */}
       <DoctorVoiceAssistantModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
@@ -690,8 +690,6 @@ export default function App() {
         appointments={appointments}
         onTriggerSpokenReminder={(text) => setLastSpokenReminder(text)}
       />
-
-      {/* Floating Doctor Voice Assistant HUD */}
       <DoctorVoiceFloatingHUD
         optInSettings={voiceOptInSettings}
         onOpenModal={() => setShowVoiceModal(true)}
@@ -705,25 +703,15 @@ export default function App() {
           setIsVoiceAssistantSpeaking(false);
         }}
         onQuickReplay={() => {
-          if (lastSpokenReminder) {
-            triggerVoiceReminder(lastSpokenReminder);
-          }
+          if (lastSpokenReminder) triggerVoiceReminder(lastSpokenReminder);
         }}
       />
-
-      {/* 7-Day Full Features Credit Card Trial Modal with All 4 Recommendations */}
-      <TryTrialModal
-        isOpen={showTrialModal}
-        onClose={() => setShowTrialModal(false)}
-        trialSubscription={trialSubscription}
-        onActivateTrial={handleActivateTrial}
-        onDeactivateTrial={handleDeactivateTrial}
-        onExtendTrial3Days={handleExtendTrial3Days}
-        onLaunchSandbox={() => {
-          setActiveView('diary');
-          setShowTrialModal(false);
-        }}
-      />
-    </div>
+    </>
   );
 }
+
+// Import auth pages
+const SignInPage = lazy(() => import('./pages/SignInPage').then(m => ({ default: m.SignInPage })));
+const SignUpPage = lazy(() => import('./pages/SignUpPage').then(m => ({ default: m.SignUpPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
