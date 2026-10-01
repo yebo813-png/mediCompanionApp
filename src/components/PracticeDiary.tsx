@@ -245,10 +245,10 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
 
   // Calculate high-level counts
   const todayApts = appointments.filter((a) => a.date === selectedDate);
-  const totalBookingsCount = todayApts.length || 5;
-  const waitingRoomCount = todayApts.filter((a) => a.status === 'Arrived' || a.status === 'In Consultation').length || 2;
-  const urgentCount = todayApts.filter((a) => a.triageLevel === 'Urgent' || a.triageLevel === 'Emergency').length || 1;
-  const locumCoveredCount = todayApts.filter((a) => a.isLocumCovered).length || 1;
+  const totalBookingsCount = todayApts.length || 0;
+  const waitingRoomCount = todayApts.filter((a) => a.status === 'Arrived' || a.status === 'In Consultation').length || 0;
+  const urgentCount = todayApts.filter((a) => a.triageLevel === 'Urgent' || a.triageLevel === 'Emergency').length || 0;
+  const locumCoveredCount = todayApts.filter((a) => a.isLocumCovered).length || 0;
 
   // Filter queue based on navigation and status pills
   const filteredAppointments = todayApts.filter((apt) => {
@@ -631,7 +631,7 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
           {/* Bottom Card: Need to rebook? */}
           <div
             onClick={() => setShowRebookModal(true)}
-            className="bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 rounded-3xl p-4 cursor-pointer transition shadow-md group"
+            className="bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl p-4 cursor-pointer transition shadow-md group"
           >
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-2xl bg-cyan-950/80 border border-cyan-800 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition">
@@ -817,7 +817,13 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
 
           {/* Interactive Appointment Rows (Triage-first color system, dominant CTA, strong hierarchy) */}
           <div className="space-y-3">
-            {displayAppointments.map((apt) => {
+            {displayAppointments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 bg-slate-900/60 border border-slate-800/80 rounded-3xl text-center">
+                <CalendarIcon className="w-10 h-10 text-slate-500 mb-3" />
+                <p className="text-sm font-semibold text-slate-400">No appointments for this date</p>
+              </div>
+            ) : (
+              displayAppointments.map((apt) => {
               const patientObj = patients.find((p) => p.id === apt.patientId);
 
               return (
@@ -928,7 +934,8 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </section>
 
@@ -959,7 +966,7 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
                 onClick={() => {
                   if (onOpenPatientFile && patients[0]) onOpenPatientFile(patients[0]);
                 }}
-                className="w-full bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-semibold p-3 rounded-2xl text-xs flex items-center justify-between transition"
+                className="w-full bg-slate-800 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold p-3 rounded-2xl text-xs flex items-center justify-between transition"
               >
                 <div className="flex items-center space-x-2">
                   <User className="w-4 h-4 text-cyan-400" />
@@ -983,7 +990,7 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
                 onClick={() => {
                   if (onOpenTelehealth) onOpenTelehealth();
                 }}
-                className="w-full bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-semibold p-3 rounded-2xl text-xs flex items-center justify-between transition"
+                className="w-full bg-slate-800 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold p-3 rounded-2xl text-xs flex items-center justify-between transition"
               >
                 <div className="flex items-center space-x-2">
                   <Video className="w-4 h-4 text-teal-400" />
@@ -1091,7 +1098,7 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
               {onOpenBillingOverview && (
                 <button
                   onClick={onOpenBillingOverview}
-                  className="w-full py-2.5 px-3 bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-300 flex items-center justify-between transition shadow-sm"
+                  className="w-full py-2.5 px-3 bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-300 flex items-center justify-between transition shadow-sm"
                 >
                   <div className="flex items-center space-x-2">
                     <BarChart3 className="w-4 h-4 text-emerald-400" />
@@ -1296,7 +1303,7 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
                 </div>
               </div>
 
-              <div className="p-4 bg-gradient-to-br from-cyan-950/60 to-slate-850 rounded-2xl border border-cyan-800/60 space-y-2">
+              <div className="p-4 bg-gradient-to-br from-cyan-950/60 to-slate-900 rounded-2xl border border-cyan-800/60 space-y-2">
                 <span className="font-bold text-white block">Upgrade to Live Production Electronic Switch</span>
                 <p className="text-slate-300 text-[11px] leading-relaxed">
                   Start sending real electronic claims directly to Discovery Health, GEMS, Bonitas, Medscheme, and Momentum with instant real-time adjudication, PMB CDL auto-basket matching, and zero claim transmission fees.

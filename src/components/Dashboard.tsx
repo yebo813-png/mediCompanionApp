@@ -141,7 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Calculate high-level stats
   const totalWaiting = appointments.filter((a) => a.status === 'Arrived').length;
   const urgentCount = triageData?.urgentCasesCount ?? appointments.filter((a) => a.triageLevel === 'Urgent').length;
-  const highPriorityCount = triageData?.highPriorityCount ?? 1;
+  const highPriorityCount = triageData?.highPriorityCount ?? 0;
   const inConsultCount = appointments.filter((a) => a.status === 'In Consultation').length;
   const completedCount = appointments.filter((a) => a.status === 'Completed').length;
 
@@ -375,7 +375,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center space-x-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+          <div className="flex flex-wrap items-center space-x-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
             <button
               onClick={() => setFilterMode('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -444,7 +444,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       ? 'bg-gradient-to-r from-rose-950/30 via-slate-900 to-slate-900 border-rose-700/80 shadow-lg shadow-rose-950/20'
                       : triage?.urgencyLevel === 'HIGH PRIORITY'
                       ? 'bg-gradient-to-r from-amber-950/20 via-slate-900 to-slate-900 border-amber-700/70'
-                      : 'bg-slate-850/60 border-slate-800 hover:border-slate-700'
+                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   <div className="p-5">

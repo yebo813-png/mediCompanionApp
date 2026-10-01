@@ -167,17 +167,17 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-slate-800">
           <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
             <span className="text-slate-400 text-[11px] block">Total Switched Claims</span>
-            <span className="text-xl font-bold text-white font-mono">R{totalClaimedZAR.toFixed(2)}</span>
+            <span className="text-xl font-bold text-white font-mono">R{(totalClaimedZAR ?? 0).toFixed(2)}</span>
           </div>
 
           <div className="bg-emerald-950/40 p-3 rounded-xl border border-emerald-800/50">
             <span className="text-emerald-300 text-[11px] block">Scheme Remittance Settled</span>
-            <span className="text-xl font-bold text-emerald-200 font-mono">R{totalPaidZAR.toFixed(2)}</span>
+            <span className="text-xl font-bold text-emerald-200 font-mono">R{(totalPaidZAR ?? 0).toFixed(2)}</span>
           </div>
 
           <div className="bg-amber-950/40 p-3 rounded-xl border border-amber-800/50">
             <span className="text-amber-300 text-[11px] block">Member Co-payments Due</span>
-            <span className="text-xl font-bold text-amber-200 font-mono">R{totalCoPayZAR.toFixed(2)}</span>
+            <span className="text-xl font-bold text-amber-200 font-mono">R{(totalCoPayZAR ?? 0).toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -315,16 +315,16 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
 
           {/* Instant Switch Adjudication Result */}
           {switchFeedback && (
-            <div className="mt-3 p-3.5 bg-slate-950 rounded-xl border border-cyan-800 text-xs space-y-2 animate-fadeIn">
+            <div className="mt-3 p-3.5 bg-slate-950 rounded-xl border border-cyan-800 text-xs space-y-2 animate-fade-in">
               <div className="flex justify-between items-center text-cyan-400 font-bold">
                 <span>Switch Response: {switchFeedback.claimStatus}</span>
                 <span className="text-[10px] text-slate-400 font-mono">{switchFeedback.transactionId}</span>
               </div>
 
               <div className="text-[11px] text-slate-300">
-                Total: <span className="font-mono text-white">R{switchFeedback.totalClaimAmountZAR.toFixed(2)}</span> • Scheme Paid:{' '}
-                <span className="font-mono text-emerald-400 font-bold">R{switchFeedback.paidAmountZAR.toFixed(2)}</span> • Co-pay:{' '}
-                <span className="font-mono text-amber-400 font-bold">R{switchFeedback.coPaymentZAR.toFixed(2)}</span>
+                Total: <span className="font-mono text-white">R{(switchFeedback.totalClaimAmountZAR ?? 0).toFixed(2)}</span> • Scheme Paid:{' '}
+                <span className="font-mono text-emerald-400 font-bold">R{(switchFeedback.paidAmountZAR ?? 0).toFixed(2)}</span> • Co-pay:{' '}
+                <span className="font-mono text-amber-400 font-bold">R{(switchFeedback.coPaymentZAR ?? 0).toFixed(2)}</span>
               </div>
 
               {switchFeedback.rejectionReason && (
@@ -349,13 +349,13 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
               Electronic Claims History & Remittance Advice
             </h3>
 
-            <div className="flex items-center space-x-1.5 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
               {['ALL', 'Discovery', 'GEMS', 'Bonitas'].map((sc) => (
                 <button
                   key={sc}
                   onClick={() => setFilterScheme(sc)}
-                  className={`px-2 py-0.5 rounded text-[11px] transition ${
-                    filterScheme === sc ? 'bg-cyan-600 text-white font-semibold' : 'bg-slate-800 text-slate-400'
+                  className={`px-3 py-1.5 rounded-lg text-[11px] min-h-[36px] transition ${
+                    filterScheme === sc ? 'bg-cyan-600 text-white font-semibold' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
                   }`}
                 >
                   {sc}
@@ -366,6 +366,13 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
 
           {/* Claims List Table */}
           <div className="divide-y divide-slate-800 max-h-72 overflow-y-auto">
+            {filteredClaims.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                <div className="text-4xl mb-3">📋</div>
+                <p className="text-sm font-medium">No claims yet</p>
+                <p className="text-xs mt-1 text-slate-600">Submit a claim to get started</p>
+              </div>
+            )}
             {filteredClaims.map((claim) => (
               <div
                 key={claim.id}
@@ -385,7 +392,7 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <div className="font-mono font-bold text-white text-xs">R{claim.totalClaimZAR.toFixed(2)}</div>
+                  <div className="font-mono font-bold text-white text-xs">R{(claim.totalClaimZAR ?? 0).toFixed(2)}</div>
                   <div className="mt-0.5">{getStatusBadge(claim.switchStatus)}</div>
                 </div>
               </div>
@@ -414,11 +421,11 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px]">Scheme Paid:</span>
-                  <span className="text-emerald-400 font-mono font-bold">R{selectedClaimDetails.paidZAR.toFixed(2)}</span>
+                  <span className="text-emerald-400 font-mono font-bold">R{(selectedClaimDetails.paidZAR ?? 0).toFixed(2)}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px]">Member Co-Pay:</span>
-                  <span className="text-amber-400 font-mono font-bold">R{selectedClaimDetails.coPayZAR.toFixed(2)}</span>
+                  <span className="text-amber-400 font-mono font-bold">R{(selectedClaimDetails.coPayZAR ?? 0).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -437,7 +444,7 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
                       <span className="font-mono text-cyan-400 font-bold">{it.code}</span> - {it.description}
                     </div>
                     <div className="text-right font-mono">
-                      Claimed: R{it.amountZAR.toFixed(2)} | <span className="text-emerald-400 font-bold">Paid: R{it.paidZAR.toFixed(2)}</span>
+                      Claimed: R{(it.amountZAR ?? 0).toFixed(2)} | <span className="text-emerald-400 font-bold">Paid: R{(it.paidZAR ?? 0).toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
