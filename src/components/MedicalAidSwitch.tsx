@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { validateICD10, searchICD10 } from '../services/icd10Validator';
+import { validateNappiCode, lookupNappi, getMimsInteractions } from '../services/nappiMims';
 import {
   CreditCard,
   Send,
@@ -43,6 +45,11 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [switchFeedback, setSwitchFeedback] = useState<any>(null);
+
+  const icd10Validation = useMemo(() => validateICD10(icd10Code), [icd10Code]);
+  const nappiValidation = useMemo(() => validateNappiCode(nappiCode), [nappiCode]);
+  const nappiDrug = useMemo(() => nappiValidation.drug ? nappiValidation.drug : lookupNappi(nappiCode), [nappiValidation, nappiCode]);
+  const mimsWarnings = useMemo(() => nappiDrug ? getMimsInteractions(nappiDrug.generic) : [], [nappiDrug]);
   const [selectedClaimDetails, setSelectedClaimDetails] = useState<MedicalAidClaim | null>(claims[0] || null);
 
   const [filterScheme, setFilterScheme] = useState('ALL');
@@ -275,8 +282,22 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
                   value={nappiCode}
                   onChange={(e) => setNappiCode(e.target.value)}
                   placeholder="e.g. 702819001"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
+                  className={`w-full bg-slate-800 border rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none ${nappiValidation.valid ? 'border-emerald-700/50' : 'border-rose-600/60'}`}
                 />
+                {nappiValidation.valid && nappiDrug && (
+                  <div className="mt-1.5 text-[11px] text-emerald-400">
+                    <span className="font-medium">{nappiDrug.name}</span>
+                    <span className="text-slate-500 ml-2">({nappiDrug.category})</span>
+                  </div>
+                )}
+                {mimsWarnings.length > 0 && (
+                  <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-[10px] font-bold text-amber-400 mb-1">⚠ MIMS Interactions</p>
+                    {mimsWarnings.map((w, i) => (
+                      <p key={i} className="text-[10px] text-amber-300/80">{w.effect}</p>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -300,9 +321,24 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
                 value={icd10Code}
                 onChange={(e) => setIcd10Code(e.target.value)}
                 placeholder="e.g. I10, E11.9, J45.9"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
+                className={`w-full bg-slate-800 border rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none ${icd10Validation.valid ? 'border-emerald-700/50' : 'border-rose-600/60'}`}
                 required
               />
+              {icd10Validation.valid ? (
+                <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-emerald-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span className="font-medium">{icd10Code}</span>
+                  <span className="text-slate-400">— {icd10Validation.description}</span>
+                  {icd10Validation.category && <span className="ml-auto text-slate-500">{icd10Validation.category}</span>}
+                </div>
+              ) : (
+                <div className="mt-1.5 text-[11px] text-rose-400">
+                  <p className="font-medium">{icd10Validation.error}</p>
+                  {icd10Validation.suggestions && icd10Validation.suggestions.length > 0 && (
+                    <p className="mt-1 text-slate-500">Did you mean: {icd10Validation.suggestions[0]}?</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <label className="flex items-center space-x-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 cursor-pointer">
