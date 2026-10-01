@@ -41,6 +41,7 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
   const [isPMB, setIsPMB] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [switchFeedback, setSwitchFeedback] = useState<any>(null);
   const [selectedClaimDetails, setSelectedClaimDetails] = useState<MedicalAidClaim | null>(claims[0] || null);
 
@@ -107,6 +108,7 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
       }
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : 'Failed to submit claim. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -191,7 +193,16 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
             Dispatch Real-time Electronic Claim (EDI)
           </h3>
 
-          <form onSubmit={handleSendClaim} className="space-y-3.5 text-xs">
+          {error && (
+            <div className="flex items-start space-x-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs" role="alert">
+              <span className="text-base leading-none">⚠️</span>
+              <div className="flex-1">
+                <p className="font-semibold">{error}</p>
+                <button type="button" onClick={() => setError(null)} className="mt-1 text-rose-400 hover:text-rose-300 underline">Dismiss</button>
+              </div>
+            </div>
+          )}
+          <form onSubmit={handleSendClaim} className="space-y-3.5 text-xs" noValidate>
             <div>
               <label className="block text-slate-400 mb-1">Select Patient File</label>
               <select
@@ -220,7 +231,7 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-400 mb-1">BHF Tariff Code</label>
                 <select
@@ -242,47 +253,54 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Tariff Amount (ZAR)</label>
+                <label htmlFor="tariff-amount" className="block text-slate-400 mb-1">Tariff Amount (ZAR)</label>
                 <input
+                  id="tariff-amount"
                   type="text"
+                  inputMode="decimal"
                   value={tariffAmount}
                   onChange={(e) => setTariffAmount(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-400 mb-1">NAPPI Medicine Code</label>
+                <label htmlFor="nappi-code" className="block text-slate-400 mb-1">NAPPI Medicine Code</label>
                 <input
+                  id="nappi-code"
                   type="text"
+                  inputMode="numeric"
                   value={nappiCode}
                   onChange={(e) => setNappiCode(e.target.value)}
                   placeholder="e.g. 702819001"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">NAPPI Amount (ZAR)</label>
+                <label htmlFor="nappi-amount" className="block text-slate-400 mb-1">NAPPI Amount (ZAR)</label>
                 <input
+                  id="nappi-amount"
                   type="text"
+                  inputMode="decimal"
                   value={nappiAmount}
                   onChange={(e) => setNappiAmount(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-400 mb-1">Primary ICD-10 Diagnostic Code</label>
+              <label htmlFor="icd10" className="block text-slate-400 mb-1">Primary ICD-10 Diagnostic Code</label>
               <input
+                id="icd10"
                 type="text"
                 value={icd10Code}
                 onChange={(e) => setIcd10Code(e.target.value)}
                 placeholder="e.g. I10, E11.9, J45.9"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:ring-1 focus:ring-cyan-500 focus:outline-none"
                 required
               />
             </div>
