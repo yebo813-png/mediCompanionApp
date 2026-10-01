@@ -144,6 +144,14 @@ export const SignInPage: React.FC = () => {
             Create Account
           </button>
         </p>
+
+        <div className="mt-6 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 text-xs text-slate-400">
+          <p className="font-semibold text-slate-300 mb-2">Demo Access</p>
+          <div className="space-y-1 font-mono">
+            <p>Doctor: demo@demo.com / mediCompanion</p>
+            <p>Admin: admin@mmmedi.com / Admin@2026</p>
+          </div>
+        </div>
       </div>
     </div>
   );

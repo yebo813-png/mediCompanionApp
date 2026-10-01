@@ -6,6 +6,7 @@ import { ModelSwitcherModal } from './components/ModelSwitcherModal';
 import { DoctorVoiceAssistantModal } from './components/DoctorVoiceAssistantModal';
 import { DoctorVoiceFloatingHUD } from './components/DoctorVoiceFloatingHUD';
 import { TrialGateModal } from './components/TrialGateModal';
+import { AdminPanel } from './components/AdminPanel';
 import { useAuth } from './context/AuthContext';
 import { PracticeStore } from './services/api';
 import { AIModelService, AIModelConfig } from './services/aiModelService';
@@ -415,6 +416,7 @@ export default function App() {
           </TrialGateWrapper>
         </ProtectedRoute>
       }>
+        <Route path="/admin" element={<AdminPanel />} />
         <Route path="/dashboard" element={<Dashboard
           appointments={appointments}
           patients={patients}

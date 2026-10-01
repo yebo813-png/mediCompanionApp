@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AuthService, AuthState, AuthUser, Session, SignUpData, SignInData, ResetPasswordData, UpdatePasswordData, TrialStatus } from '../lib/auth';
+import { findCredential } from '../services/credentials';
 
 interface AuthContextType extends AuthState {
   signUp: (data: SignUpData) => Promise<{ error: string | null }>;
@@ -40,6 +41,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const initAuth = async () => {
+      const localRaw = localStorage.getItem('mmmedi_session');
+      if (localRaw) {
+        try {
+          const parsed = JSON.parse(localRaw);
+          if (parsed.user && parsed.token) {
+            const mockSession = { access_token: parsed.token, user: parsed.user } as unknown as Session;
+            if (mounted) setState({ user: parsed.user as AuthUser, session: mockSession, loading: false, initialized: true });
+            return;
+          }
+        } catch { /* ignore */ }
+      }
       const { session } = await authService.getSession();
       if (session) {
         const { user } = await authService.getUser();
@@ -83,6 +95,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (data: SignInData): Promise<{ error: string | null }> => {
     setState(prev => ({ ...prev, loading: true }));
+
+    const cred = findCredential(data.email, data.password);
+    if (cred) {
+      const mockUser = {
+        id: cred.role === 'admin' ? 'admin-000' : 'demo-000',
+        email: cred.email,
+        user_metadata: {
+          full_name: cred.name,
+          role: cred.role,
+          subscription_status: cred.subscriptionStatus,
+          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          plan_name: cred.role === 'admin' ? 'Admin (Full Access)' : 'Professional (7-day trial)',
+        },
+        app_metadata: {},
+      } as unknown as AuthUser;
+      const mockSession = { access_token: 'local-' + cred.role, user: mockUser } as unknown as Session;
+      localStorage.setItem('mmmedi_session', JSON.stringify({ user: mockUser, token: mockSession.access_token }));
+      setState({ user: mockUser, session: mockSession, loading: false, initialized: true });
+      return { error: null };
+    }
+
     const { user, session, error } = await authService.signIn(data);
     if (error) {
       setState(prev => ({ ...prev, loading: false }));
@@ -96,7 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setState(prev => ({ ...prev, loading: true }));
-    await authService.signOut();
+    localStorage.removeItem('mmmedi_session');
+    try { await authService.signOut(); } catch { /* local session */ }
     setState({ user: null, session: null, loading: false, initialized: true });
   };
 
