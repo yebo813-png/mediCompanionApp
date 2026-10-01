@@ -33,7 +33,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { Appointment, Patient, MedicalAidClaim } from '../types';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface PracticeDiaryProps {
   appointments: Appointment[];
@@ -197,7 +197,7 @@ export const PracticeDiary: React.FC<PracticeDiaryProps> = ({
   // WhatsApp sender
   const handleSendWhatsApp = async (apt: Appointment) => {
     try {
-      const res = await MedSwitchApi.sendWhatsAppMessage({
+      const res = await MmediCompannionApi.sendWhatsAppMessage({
         recipientPhone: apt.patientPhone,
         patientName: apt.patientName,
         templateType: 'APPOINTMENT_CONFIRMATION',

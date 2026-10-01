@@ -13,7 +13,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { Patient, AuditLog } from '../types';
-import { MedSwitchApi } from '../services/api';
+import { MmediCompannionApi } from '../services/api';
 
 interface ComplianceAndFHIRProps {
   currentPatient: Patient | null;
@@ -195,7 +195,7 @@ export const ComplianceAndFHIR: React.FC<ComplianceAndFHIRProps> = ({
       </table>
     `;
 
-    MedSwitchApi.exportToWord(`POPIA_HIPAA_Audit_Report_${new Date().toISOString().slice(0, 10)}`, docHtml);
+    MmediCompannionApi.exportToWord(`POPIA_HIPAA_Audit_Report_${new Date().toISOString().slice(0, 10)}`, docHtml);
   };
 
   return (

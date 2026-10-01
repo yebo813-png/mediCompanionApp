@@ -63,7 +63,7 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-xl font-bold text-white tracking-tight">Mediompanion • Patient Companion App</h2>
+              <h2 className="text-xl font-bold text-white tracking-tight">MmediCompannion • Patient Companion App</h2>
               <span className="text-[10px] font-bold bg-orange-950 text-orange-300 border border-orange-800 px-2 py-0.5 rounded-full">
                 Client Mobile View
               </span>

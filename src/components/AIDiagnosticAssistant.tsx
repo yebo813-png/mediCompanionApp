@@ -19,7 +19,7 @@ import {
   Info,
 } from 'lucide-react';
 import { Patient, NappiMedication } from '../types';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface AIDiagnosticAssistantProps {
   currentPatient: Patient | null;
@@ -80,7 +80,7 @@ export const AIDiagnosticAssistant: React.FC<AIDiagnosticAssistantProps> = ({
     setCommitSuccess(false);
 
     try {
-      const res = await MedSwitchApi.runDiagnosticAnalysis({
+      const res = await MmediCompannionApi.runDiagnosticAnalysis({
         patient,
         symptoms: { complaint, duration, severity, factors },
         vitals: { bp, pulse, temp, spo2, respRate, weight },

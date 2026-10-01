@@ -13,7 +13,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { Patient } from '../types';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface DigitalPenCanvasProps {
   currentPatient: Patient | null;
@@ -240,7 +240,7 @@ export const DigitalPenCanvas: React.FC<DigitalPenCanvasProps> = ({
 
     try {
       const dataUrl = canvas.toDataURL('image/png');
-      const res = await MedSwitchApi.transcribeHandwriting(dataUrl);
+      const res = await MmediCompannionApi.transcribeHandwriting(dataUrl);
 
       if (res.success && res.data) {
         setTranscribedResult(res.data);

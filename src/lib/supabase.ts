@@ -23,19 +23,6 @@ export function getSupabaseClient(): SupabaseClient<Database> {
   return supabaseInstance;
 }
 
-export function getSupabaseAdminClient(): SupabaseClient<Database> {
-  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase service role credentials not configured');
-  }
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
 function createMockClient(): SupabaseClient<Database> {
   return createClient<Database>('http://localhost:54321', 'mock-key');
 }

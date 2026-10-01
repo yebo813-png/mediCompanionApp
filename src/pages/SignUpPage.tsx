@@ -134,7 +134,7 @@ export const SignUpPage: React.FC = () => {
             <Shield className="w-7 h-7 text-cyan-400" />
           </div>
           <h1 className="text-2xl font-extrabold text-white">Create Your Practice Account</h1>
-          <p className="text-slate-400 mt-1">Join thousands of SA doctors on MedSwitch</p>
+          <p className="text-slate-400 mt-1">Join thousands of SA doctors on MmediCompannion</p>
         </div>
 
         {submitError && (

@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI, Modality } from '@google/genai';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -15,6 +16,19 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many attempts, please try again after 15 minutes.' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests, please slow down.' }
+});
+
+app.use('/api', apiLimiter);
 app.use(express.json({ limit: '15mb' }));
 
 // Shared server-side Google GenAI instance
@@ -47,7 +61,7 @@ wss.on('connection', async (clientWs: WebSocket) => {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
           },
-          systemInstruction: `You are Dr. Thabo Ndlovu's proactive clinical AI voice assistant at MedSwitch SA medical practice.
+          systemInstruction: `You are Dr. Thabo Ndlovu's proactive clinical AI voice assistant at MmediCompannion medical practice.
 You are concise, professional, clinically sharp, and speak with a respectful, encouraging South African medical tone.
 Your primary role is to converse in real-time, answer clinical questions, suggest South African ICD-10 diagnostic codes and tariffs, and proactively remind the doctor about patient safety, severe drug-drug interactions, waiting room delays, and unsubmitted medical aid claims.
 Keep your spoken responses natural, direct, and under 2-3 sentences so the doctor can remain fully focused on compassionate patient care.`,
@@ -639,7 +653,7 @@ app.post('/api/gemini/analyze-appointments-urgency', async (req: Request, res: R
       };
     });
 
-    const prompt = `You are an expert Clinical Triage Specialist and Emergency Medicine Consultant operating inside "Mediompanion", a South African medical practice management system.
+    const prompt = `You are an expert Clinical Triage Specialist and Emergency Medicine Consultant operating inside "MmediCompannion", a South African medical practice management system.
 Evaluate today's appointment list and identify "Urgent" cases requiring immediate doctor attention based on clinical notes, presenting complaints, and patient medical history.
 
 Adhere to South African Triage Scale (SATS) principles and medical red-flag recognition:
@@ -798,7 +812,7 @@ Provide only valid JSON.`;
         urgentCasesCount: urgentCount,
         highPriorityCount: triagedAppointments.filter((t: any) => t.urgencyLevel === 'HIGH PRIORITY').length,
         clinicalAlertSummary: urgentCount > 0
-          ? `Mediompanion AI has identified ${urgentCount} clinical case(s) requiring immediate attention. Lerato Mokoena (Asthma exacerbation refractory to beta-agonists) is waiting and requires immediate room admission for nebulization.`
+          ? `MmediCompannion AI has identified ${urgentCount} clinical case(s) requiring immediate attention. Lerato Mokoena (Asthma exacerbation refractory to beta-agonists) is waiting and requires immediate room admission for nebulization.`
           : 'All scheduled patients currently triaged within safe waiting limits. No acute red flags detected.',
         practiceActionItems: [
           'Admit Lerato Mokoena immediately to Consulting Room 1 for nebulizer therapy',
@@ -1926,7 +1940,7 @@ app.post('/api/whatsapp/send', (req: Request, res: Response) => {
 
   let messageText = '';
   if (templateType === 'APPOINTMENT_CONFIRMATION') {
-    messageText = `Hello ${patientName || 'Patient'},\nThis is a confirmation for your appointment with Dr. Thabo Ndlovu at Rosebank Medical Centre on ${details?.date || 'Tomorrow'} at ${details?.time || '10:00'}.\n\nPractice Address: 14 Hood Ave, Rosebank.\nReply 1 to Confirm, 2 to Reschedule.\nMedSwitch SA Ref: #${Math.floor(1000 + Math.random() * 9000)}`;
+    messageText = `Hello ${patientName || 'Patient'},\nThis is a confirmation for your appointment with Dr. Thabo Ndlovu at Rosebank Medical Centre on ${details?.date || 'Tomorrow'} at ${details?.time || '10:00'}.\n\nPractice Address: 14 Hood Ave, Rosebank.\nReply 1 to Confirm, 2 to Reschedule.\nMmediCompannion Ref: #${Math.floor(1000 + Math.random() * 9000)}`;
   } else if (templateType === 'PRESCRIPTION_READY') {
     messageText = `Dear ${patientName},\nDr. Thabo Ndlovu has issued your digital prescription (Ref: #${details?.scriptNumber || 'RX-4912'}).\nYou can present this barcode at any South African pharmacy (Clicks, Dis-Chem, Medirite) or download the PDF: https://medswitchsa.co.za/rx/${details?.scriptNumber || 'RX-4912'}\n\nStay well!`;
   } else if (templateType === 'CHRONIC_MED_REMINDER') {
@@ -2030,7 +2044,7 @@ async function startServer() {
   }
 
   server.listen(PORT, () => {
-    console.log(`MedSwitch SA Practice Management Server listening on port ${PORT}`);
+    console.log(`MmediCompannion Practice Management Server listening on port ${PORT}`);
   });
 }
 

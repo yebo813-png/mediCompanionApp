@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Patient, Appointment, ICD10Code, TariffItem, NappiMedication } from '../types';
 import { COMMON_ICD10, COMMON_TARIFFS, COMMON_NAPPI } from '../services/dataService';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface ConsultationSOAPProps {
   currentPatient: Patient | null;
@@ -157,7 +157,7 @@ export const ConsultationSOAP: React.FC<ConsultationSOAPProps> = ({
     setIsAiLoading(true);
     setAiSuggestions(null);
     try {
-      const res = await MedSwitchApi.getAITreatmentPlan({
+      const res = await MmediCompannionApi.getAITreatmentPlan({
         patientName: patient?.fullName || 'Sipho Zulu',
         age: patient ? new Date().getFullYear() - parseInt(patient.dob.substring(0, 4)) : 40,
         gender: patient?.gender || 'Male',
@@ -182,7 +182,7 @@ export const ConsultationSOAP: React.FC<ConsultationSOAPProps> = ({
   const handleFormatAiSoap = async () => {
     setIsAiLoading(true);
     try {
-      const res = await MedSwitchApi.getAISOAPNotes({
+      const res = await MmediCompannionApi.getAISOAPNotes({
         roughNotes: `${subjective} \n Examination: ${objective} \n Vitals: BP ${bp}, HR ${pulse}`,
         patientSummary: `${patient?.fullName}, ${patient?.medicalAidName}`,
       });
@@ -274,7 +274,7 @@ export const ConsultationSOAP: React.FC<ConsultationSOAPProps> = ({
       <p style="margin-top: 30pt;">_______________________________<br/><strong>Dr. Thabo Ndlovu</strong><br/>Digital Electronic Signature (HPCSA Compliant)</p>
     `;
 
-    MedSwitchApi.exportToWord(`Consultation_${patient?.fullName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`, docHtml);
+    MmediCompannionApi.exportToWord(`Consultation_${patient?.fullName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`, docHtml);
   };
 
   const handleLaunchSwitchClaim = () => {

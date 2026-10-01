@@ -15,7 +15,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { Patient, MedicalAidClaim } from '../types';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface MedicalAidSwitchProps {
   claims: MedicalAidClaim[];
@@ -68,7 +68,7 @@ export const MedicalAidSwitch: React.FC<MedicalAidSwitchProps> = ({
     };
 
     try {
-      const res = await MedSwitchApi.submitSwitchClaim(payload);
+      const res = await MmediCompannionApi.submitSwitchClaim(payload);
       if (res.success && res.data) {
         const sw = res.data;
         setSwitchFeedback(sw);

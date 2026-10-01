@@ -79,7 +79,7 @@ export const TrialGateModal: React.FC<TrialGateProps> = ({ isOpen, onClose, onTr
           <Shield className="w-10 h-10 text-cyan-400" />
         </div>
         <h2 className="text-2xl font-extrabold text-white">Start Your 7-Day Free Trial</h2>
-        <p className="text-slate-300 mt-2">Full access to MedSwitch SA Professional - no restrictions</p>
+        <p className="text-slate-300 mt-2">Full access to MmediCompannion Professional - no restrictions</p>
       </div>
 
       <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5 space-y-4">
@@ -250,7 +250,7 @@ export const TrialGateModal: React.FC<TrialGateProps> = ({ isOpen, onClose, onTr
         <CheckCircle2 className="w-8 h-8 text-emerald-400" />
       </div>
       <h3 className="text-xl font-bold text-white">Trial Activated!</h3>
-      <p className="text-slate-300">Your 7-day free trial has started. Welcome to MedSwitch SA Professional.</p>
+      <p className="text-slate-300">Your 7-day free trial has started. Welcome to MmediCompannion Professional.</p>
       <div className="p-4 bg-emerald-950/30 border border-emerald-800/50 rounded-2xl text-emerald-200 text-sm">
         Trial ends in 7 days • Auto-renews at R499/month • Cancel anytime
       </div>

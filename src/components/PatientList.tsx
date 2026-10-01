@@ -17,7 +17,7 @@ import {
   Send,
 } from 'lucide-react';
 import { Patient } from '../types';
-import { MedSwitchApi } from '../services/api';
+import { MmediCompannionApi } from '../services/api';
 
 interface PatientListProps {
   patients: Patient[];
@@ -56,7 +56,7 @@ export const PatientList: React.FC<PatientListProps> = ({
     setEligibilityChecking(true);
     setEligibilityResult(null);
     try {
-      const res = await MedSwitchApi.verifyEligibility({
+      const res = await MmediCompannionApi.verifyEligibility({
         schemeCode: patient.medicalAidName,
         membershipNumber: patient.medicalAidNumber,
         dependantCode: patient.dependantCode,

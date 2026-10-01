@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Patient, NappiMedication } from '../types';
 import { COMMON_NAPPI } from '../services/dataService';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface PrescriptionManagerProps {
   currentPatient: Patient | null;
@@ -61,7 +61,7 @@ export const PrescriptionManager: React.FC<PrescriptionManagerProps> = ({
   const handleSendWhatsApp = async () => {
     if (!patient) return;
     try {
-      const res = await MedSwitchApi.sendWhatsAppMessage({
+      const res = await MmediCompannionApi.sendWhatsAppMessage({
         recipientPhone: patient.phone,
         patientName: patient.fullName,
         templateType: 'PRESCRIPTION_READY',
@@ -137,7 +137,7 @@ export const PrescriptionManager: React.FC<PrescriptionManagerProps> = ({
       <p style="margin-top: 30pt;">_______________________________<br/><strong>Dr. Thabo Ndlovu</strong><br/>Digital Electronic Signature (HPCSA Compliant)</p>
     `;
 
-    MedSwitchApi.exportToWord(`Prescription_${patient?.fullName.replace(/\s+/g, '_')}_${scriptNumber}`, docHtml);
+    MmediCompannionApi.exportToWord(`Prescription_${patient?.fullName.replace(/\s+/g, '_')}_${scriptNumber}`, docHtml);
   };
 
   return (

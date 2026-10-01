@@ -12,7 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { Patient, SpecialistReferral } from '../types';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface ReferralsHubProps {
   referrals: SpecialistReferral[];
@@ -43,7 +43,7 @@ export const ReferralsHub: React.FC<ReferralsHubProps> = ({
   const handleGenerateAiLetter = async () => {
     setIsAiGenerating(true);
     try {
-      const res = await MedSwitchApi.generateReferralLetter({
+      const res = await MmediCompannionApi.generateReferralLetter({
         patient,
         specialistType,
         reason,
@@ -111,7 +111,7 @@ export const ReferralsHub: React.FC<ReferralsHubProps> = ({
       <p style="margin-top: 30pt;">Warm collegial regards,<br/><br/>_______________________________<br/><strong>Dr. Thabo Ndlovu</strong><br/>MBChB, FCFP (SA)</p>
     `;
 
-    MedSwitchApi.exportToWord(`Referral_${ref.patientName.replace(/\s+/g, '_')}_${ref.specialistType}`, docHtml);
+    MmediCompannionApi.exportToWord(`Referral_${ref.patientName.replace(/\s+/g, '_')}_${ref.specialistType}`, docHtml);
   };
 
   return (

@@ -416,7 +416,7 @@ export const Homepage: React.FC<HomepageProps> = ({
             </h2>
 
             <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-              In legacy practices, doctors spend over 65% of the consultation staring at screens, typing notes, and calling medical aids. With MedSwitch SA, our diverse clinical teams dedicate 100% of their human focus, compassion, and presence to patient care — while the autonomous switchway and AI settle claims, route e-prescriptions, and alert patients on their smartphones in real-time.
+              In legacy practices, doctors spend over 65% of the consultation staring at screens, typing notes, and calling medical aids. With MmediCompannion, our diverse clinical teams dedicate 100% of their human focus, compassion, and presence to patient care — while the autonomous switchway and AI settle claims, route e-prescriptions, and alert patients on their smartphones in real-time.
             </p>
           </div>
 
@@ -2557,7 +2557,7 @@ export const Homepage: React.FC<HomepageProps> = ({
           </div>
 
           <div className="mt-12 text-xs text-slate-500 dark:text-slate-400">
-            MedSwitch SA Ecosystem · Compatible with all BHF practice numbers · Zero hardware setup required
+            MmediCompannion Ecosystem · Compatible with all BHF practice numbers · Zero hardware setup required
           </div>
         </div>
       </section>

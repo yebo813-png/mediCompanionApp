@@ -23,7 +23,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { Patient, Appointment } from '../types';
-import { MedSwitchApi, PracticeStore } from '../services/api';
+import { MmediCompannionApi, PracticeStore } from '../services/api';
 
 interface TelemedicineSuiteProps {
   currentPatient: Patient | null;
@@ -219,7 +219,7 @@ export const TelemedicineSuite: React.FC<TelemedicineSuiteProps> = ({
       <p style="margin-top: 40pt;">_______________________________<br/><strong>Dr. Thabo Ndlovu</strong><br/>Digital Electronic Signature (HPCSA Ethical Rule 15 Compliant)</p>
     `;
 
-    MedSwitchApi.exportToWord(`SickNote_${patient?.fullName.replace(/\s+/g, '_')}`, docHtml);
+    MmediCompannionApi.exportToWord(`SickNote_${patient?.fullName.replace(/\s+/g, '_')}`, docHtml);
     setSickNoteIssued(true);
     setTimeout(() => {
       setSickNoteIssued(false);

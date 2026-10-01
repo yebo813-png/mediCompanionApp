@@ -186,7 +186,7 @@ export const PracticeStore = {
 };
 
 // API Services contacting backend
-export const MedSwitchApi = {
+export const MmediCompannionApi = {
   // Comprehensive AI Diagnostic Assistant
   async runDiagnosticAnalysis(payload: {
     patient: any;
@@ -336,4 +336,3 @@ export const MedSwitchApi = {
   },
 };
 
-export const MediompanionApi = MedSwitchApi;

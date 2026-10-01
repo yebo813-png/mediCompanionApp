@@ -85,7 +85,7 @@ export const SignInPage: React.FC = () => {
             <Lock className="w-7 h-7 text-cyan-400" />
           </div>
           <h1 className="text-2xl font-extrabold text-white">Welcome Back</h1>
-          <p className="text-slate-400 mt-1">Sign in to your MedSwitch SA practice</p>
+          <p className="text-slate-400 mt-1">Sign in to your MmediCompannion practice</p>
         </div>
 
         {submitError && (
