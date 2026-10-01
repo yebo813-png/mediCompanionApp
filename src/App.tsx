@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import { ModelSwitcherModal } from './components/ModelSwitcherModal';
@@ -105,7 +105,9 @@ function TrialGateWrapper({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { user, signOut } = useAuth();
-  const [activeView, setActiveView] = useState<string>('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeView = location.pathname.slice(1) || 'dashboard';
   const [isClientPortal, setIsClientPortal] = useState<boolean>(false);
   const [isVoiceActive, setIsVoiceActive] = useState<boolean>(false);
   const [activeAIModel, setActiveAIModel] = useState<AIModelConfig>(AIModelService.getActiveModel());
@@ -175,7 +177,7 @@ export default function App() {
 
   const handleSelectPatient = (patient: Patient) => {
     setSelectedPatient(patient);
-    setActiveView('patients');
+    navigate('/patients');
     if (voiceOptInSettings.isEnabled && voiceOptInSettings.alertAllergies && patient.allergies?.length > 0) {
       triggerVoiceReminder(`Dr. Ndlovu, safety alert: ${patient.fullName} has a recorded allergy to ${patient.allergies.join(', ')}.`);
     }
@@ -184,7 +186,7 @@ export default function App() {
   const handleStartConsultationFromAppointment = (apt: Appointment) => {
     const matchedPatient = patients.find((p) => p.id === apt.patientId) || patients[0];
     setSelectedPatient(matchedPatient);
-    setActiveView('consult');
+    navigate('/consult');
     if (voiceOptInSettings.isEnabled && voiceOptInSettings.alertAllergies && matchedPatient.allergies?.length > 0) {
       triggerVoiceReminder(`Dr. Ndlovu, safety alert: ${matchedPatient.fullName} has a documented allergy to ${matchedPatient.allergies.join(', ')}.`);
     }
@@ -192,7 +194,7 @@ export default function App() {
 
   const handleStartConsultationForPatient = (patient: Patient) => {
     setSelectedPatient(patient);
-    setActiveView('consult');
+    navigate('/consult');
     if (voiceOptInSettings.isEnabled && voiceOptInSettings.alertAllergies && patient.allergies?.length > 0) {
       triggerVoiceReminder(`Dr. Ndlovu, safety alert: ${patient.fullName} has a documented allergy to ${patient.allergies.join(', ')}.`);
     }
@@ -217,12 +219,12 @@ export default function App() {
 
   const handleOpenSwitchWithClaim = (claimData: any) => {
     setPresetClaimData(claimData);
-    setActiveView('switch');
+    navigate('/switch');
   };
 
   const handleOpenRxWithItems = (rxItems: NappiMedication[]) => {
     setPresetRxItems(rxItems);
-    setActiveView('rx');
+    navigate('/rx');
   };
 
   const handleReferralCreated = (newRef: SpecialistReferral) => {
@@ -286,11 +288,11 @@ export default function App() {
   };
 
   const handleApplyTranscribedNotes = (text: string, structured: any) => {
-    setActiveView('consult');
+    navigate('/consult');
   };
 
   const handleRequestLocumFromDiary = (slotDate: string, slotTime: string) => {
-    setActiveView('locum');
+    navigate('/locum');
   };
 
   const waitingCount = appointments.filter(
@@ -300,6 +302,8 @@ export default function App() {
   const openClaimsCount = claims.filter((c) => c.switchStatus === 'QUEUED' || c.switchStatus === 'PARTIALLY_PAID').length;
   const pendingLocumCount = locumSlots.filter((l) => l.status === 'AUTO_MATCHED' || l.status === 'OPEN_SEARCHING').length;
   const urgentCount = appointments.filter((a) => a.triageLevel === 'Urgent' || a.triageLevel === 'Emergency').length || 1;
+
+  const goToView = (view: string) => navigate(view === 'home' ? '/home' : `/${view}`);
 
   return (
     <Routes>
@@ -313,34 +317,211 @@ export default function App() {
       <Route element={
         <ProtectedRoute>
           <TrialGateWrapper>
-            <AppLayout>
-              <AppRoutes />
-            </AppLayout>
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+              <Header
+                activeView={activeView}
+                setActiveView={goToView}
+                isClientPortal={isClientPortal}
+                setIsClientPortal={setIsClientPortal}
+                patients={patients}
+                onSelectPatient={handleSelectPatient}
+                isVoiceActive={isVoiceActive}
+                setIsVoiceActive={setIsVoiceActive}
+                isTrialActive={true}
+                onActivateTrial={() => {}}
+                onOpenTrialModal={() => {}}
+                trialDaysRemaining={7}
+                activeModel={activeAIModel}
+                onOpenModelSwitcher={() => setShowModelSwitcher(true)}
+                isVoiceOptedIn={voiceOptInSettings.isEnabled}
+                onOpenVoiceAssistant={() => setShowVoiceModal(true)}
+              />
+
+              <Navigation
+                activeView={activeView}
+                setActiveView={goToView}
+                waitingCount={waitingCount}
+                openClaimsCount={openClaimsCount}
+                pendingLocumCount={pendingLocumCount}
+                urgentCount={urgentCount}
+              />
+
+              <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <Suspense fallback={<LoadingFallback />}>
+                  <Outlet />
+                </Suspense>
+              </main>
+
+              <Suspense fallback={null}>
+                <PatientOnboardingModal
+                  isOpen={showOnboardingModal}
+                  onClose={() => setShowOnboardingModal(false)}
+                  onSavePatient={handleSavePatient}
+                />
+                <ModelSwitcherModal
+                  isOpen={showModelSwitcher}
+                  onClose={() => setShowModelSwitcher(false)}
+                  activeModel={activeAIModel}
+                  onSelectModel={(m) => { setActiveAIModel(m); }}
+                />
+                <DoctorVoiceAssistantModal
+                  isOpen={showVoiceModal}
+                  onClose={() => setShowVoiceModal(false)}
+                  optInSettings={voiceOptInSettings}
+                  onUpdateSettings={(newSettings) => setVoiceOptInSettings(newSettings)}
+                  activePatient={selectedPatient}
+                  patients={patients}
+                  appointments={appointments}
+                  onTriggerSpokenReminder={(text) => setLastSpokenReminder(text)}
+                />
+                <DoctorVoiceFloatingHUD
+                  optInSettings={voiceOptInSettings}
+                  onOpenModal={() => setShowVoiceModal(true)}
+                  lastSpokenReminder={lastSpokenReminder}
+                  onDismissReminder={() => setLastSpokenReminder(null)}
+                  isSpeaking={isVoiceAssistantSpeaking}
+                  onStopSpeaking={() => {
+                    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                      window.speechSynthesis.cancel();
+                    }
+                    setIsVoiceAssistantSpeaking(false);
+                  }}
+                  onQuickReplay={() => {
+                    if (lastSpokenReminder) triggerVoiceReminder(lastSpokenReminder);
+                  }}
+                />
+              </Suspense>
+            </div>
           </TrialGateWrapper>
         </ProtectedRoute>
       }>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardRoute />} />
-        <Route path="/diary" element={<DiaryRoute />} />
-        <Route path="/patients" element={<PatientsRoute />} />
-        <Route path="/diagnostic" element={<DiagnosticRoute />} />
-        <Route path="/consult" element={<ConsultRoute />} />
-        <Route path="/pen" element={<PenRoute />} />
-        <Route path="/rx" element={<RxRoute />} />
-        <Route path="/switch" element={<SwitchRoute />} />
-        <Route path="/billing" element={<BillingRoute />} />
-        <Route path="/referrals" element={<ReferralsRoute />} />
-        <Route path="/telehealth" element={<TelehealthRoute />} />
-        <Route path="/locum" element={<LocumRoute />} />
-        <Route path="/cpd" element={<CPDRoute />} />
-        <Route path="/compliance" element={<ComplianceRoute />} />
-        <Route path="/patient_portal" element={<PatientPortalRoute />} />
+        <Route path="/home" element={<Homepage
+          onLaunchSuite={goToView}
+          onOpenPatientPortal={() => navigate('/patient_portal')}
+          onOpenVoiceAssistant={() => setShowVoiceModal(true)}
+          isTrialActive={true}
+        />} />
+        <Route path="/dashboard" element={<Dashboard
+          appointments={appointments}
+          patients={patients}
+          consultations={consultations}
+          claims={claims}
+          locumSlots={locumSlots}
+          onStartConsultation={handleStartConsultationFromAppointment}
+          onOpenPatientFile={(p) => { setSelectedPatient(p); navigate('/patients'); }}
+          onOpenTelehealth={() => navigate('/telehealth')}
+          onOpenSwitch={() => navigate('/switch')}
+          onOpenBillingOverview={() => navigate('/billing')}
+          onOpenNewPatientModal={() => setShowOnboardingModal(true)}
+          onUpdateAppointmentStatus={(aptId, newStatus) => {
+            const apt = appointments.find((a) => a.id === aptId);
+            if (apt) handleBookAppointment({ ...apt, status: newStatus });
+          }}
+        />} />
+        <Route path="/diary" element={<PracticeDiary
+          appointments={appointments}
+          patients={patients}
+          onStartConsultation={handleStartConsultationFromAppointment}
+          onBookAppointment={handleBookAppointment}
+          onRequestLocum={handleRequestLocumFromDiary}
+          onOpenPatientFile={(p) => { setSelectedPatient(p); navigate('/patients'); }}
+          onOpenTelehealth={() => navigate('/telehealth')}
+          onOpenSwitch={() => navigate('/switch')}
+          onOpenBillingOverview={() => navigate('/billing')}
+          isVoiceActiveGlobal={isVoiceActive}
+          setIsVoiceActiveGlobal={setIsVoiceActive}
+          isTrialActive={true}
+          onActivateTrial={() => {}}
+        />} />
+        <Route path="/patients" element={<PatientList
+          patients={patients}
+          onSelectPatient={handleSelectPatient}
+          onOpenOnboarding={() => setShowOnboardingModal(true)}
+          onStartConsultationForPatient={handleStartConsultationForPatient}
+          onOpenSwitchForPatient={(p) => { setSelectedPatient(p); navigate('/switch'); }}
+        />} />
+        <Route path="/diagnostic" element={<AIDiagnosticAssistant
+          currentPatient={selectedPatient}
+          patients={patients}
+          onSelectPatient={(p) => setSelectedPatient(p)}
+          onCommitToPatientFile={(diag, plan, meds) => {
+            if (selectedPatient) {
+              const updatedPat = { ...selectedPatient, tags: [...new Set([...selectedPatient.tags, 'AI Diagnosis Confirmed', diag.split(' ')[0]])] };
+              handleSavePatient(updatedPat);
+            }
+            if (meds.length > 0) { setPresetRxItems(meds); }
+          }}
+          onOpenPrescriptionPad={(meds) => { setPresetRxItems(meds); navigate('/rx'); }}
+        />} />
+        <Route path="/consult" element={<ConsultationSOAP
+          currentPatient={selectedPatient}
+          patients={patients}
+          onSelectPatient={(p) => setSelectedPatient(p)}
+          onOpenSwitchWithClaim={handleOpenSwitchWithClaim}
+          onOpenRxWithItems={handleOpenRxWithItems}
+          isVoiceActiveGlobal={isVoiceActive}
+        />} />
+        <Route path="/pen" element={<DigitalPenCanvas
+          currentPatient={selectedPatient}
+          onApplyTranscribedNotes={handleApplyTranscribedNotes}
+        />} />
+        <Route path="/rx" element={<PrescriptionManager
+          currentPatient={selectedPatient}
+          initialItems={presetRxItems}
+        />} />
+        <Route path="/switch" element={<MedicalAidSwitch
+          claims={claims}
+          patients={patients}
+          onClaimCreated={handleClaimCreated}
+          presetClaimData={presetClaimData}
+        />} />
+        <Route path="/billing" element={<BillingOverview
+          claims={claims}
+          patients={patients}
+          onOpenSwitch={() => navigate('/switch')}
+          onSelectClaim={(claim) => { setPresetClaimData(claim); navigate('/switch'); }}
+          isTrialActive={true}
+          onActivateTrial={() => {}}
+        />} />
+        <Route path="/referrals" element={<ReferralsHub
+          referrals={referrals}
+          patients={patients}
+          onReferralCreated={handleReferralCreated}
+        />} />
+        <Route path="/telehealth" element={<TelemedicineSuite
+          currentPatient={selectedPatient}
+          patients={patients}
+          onSelectPatient={(p) => setSelectedPatient(p)}
+          onBookVirtualAppointment={handleBookAppointment}
+          onOpenConsultationNotes={(p) => { setSelectedPatient(p); navigate('/consult'); }}
+        />} />
+        <Route path="/locum" element={<LocumTenensMarketplace
+          locumSlots={locumSlots}
+          onAddLocumSlot={handleAddLocumSlot}
+          onConfirmLocum={handleConfirmLocum}
+        />} />
+        <Route path="/cpd" element={<DoctorCPDTracker
+          cpdCertificates={cpdCerts}
+          onAddCertificate={handleAddCertificate}
+        />} />
+        <Route path="/compliance" element={<ComplianceAndFHIR
+          currentPatient={selectedPatient}
+          patients={patients}
+          auditLogs={auditLogs}
+        />} />
+        <Route path="/patient_portal" element={<PatientPortalView
+          currentPatient={selectedPatient}
+          patients={patients}
+          reminders={reminders}
+          onToggleTaken={handleToggleReminderTaken}
+          onRequestRefill={handleRequestRefill}
+          onOpenTelehealth={() => navigate('/telehealth')}
+        />} />
       </Route>
 
-      {/* Modals (outside routes) */}
-      <Route path="*">
-        <GlobalModals />
-      </Route>
+      {/* Unknown paths fall back to the dashboard */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
@@ -349,364 +530,10 @@ export default function App() {
 function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-950">
-      {children}
+      <Suspense fallback={<LoadingFallback />}>
+        {children}
+      </Suspense>
     </div>
-  );
-}
-
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [activeView, setActiveView] = useState<string>('dashboard');
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
-      <Header
-        activeView={activeView}
-        setActiveView={setActiveView}
-        isClientPortal={false}
-        setIsClientPortal={() => {}}
-        patients={[]}
-        onSelectPatient={() => {}}
-        isVoiceActive={false}
-        setIsVoiceActive={() => {}}
-        isTrialActive={true}
-        onActivateTrial={() => {}}
-        onOpenTrialModal={() => {}}
-        trialDaysRemaining={7}
-        activeModel={activeAIModel}
-        onOpenModelSwitcher={() => setShowModelSwitcher(true)}
-        isVoiceOptedIn={voiceOptInSettings.isEnabled}
-        onOpenVoiceAssistant={() => setShowVoiceModal(true)}
-      />
-
-      <Navigation
-        activeView={activeView}
-        setActiveView={setActiveView}
-        waitingCount={waitingCount}
-        openClaimsCount={openClaimsCount}
-        pendingLocumCount={pendingLocumCount}
-        urgentCount={urgentCount}
-      />
-
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Suspense fallback={<LoadingFallback />}>
-          {children}
-        </Suspense>
-      </main>
-    </div>
-  );
-}
-
-function AppRoutes() {
-  return (
-    <>
-      {activeView === 'dashboard' && <Dashboard
-        appointments={appointments}
-        patients={patients}
-        consultations={consultations}
-        claims={claims}
-        locumSlots={locumSlots}
-        onStartConsultation={handleStartConsultationFromAppointment}
-        onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
-        onOpenTelehealth={() => setActiveView('telehealth')}
-        onOpenSwitch={() => setActiveView('switch')}
-        onOpenBillingOverview={() => setActiveView('billing')}
-        onOpenNewPatientModal={() => setShowOnboardingModal(true)}
-        onUpdateAppointmentStatus={(aptId, newStatus) => {
-          const apt = appointments.find((a) => a.id === aptId);
-          if (apt) handleBookAppointment({ ...apt, status: newStatus });
-        }}
-      />}
-
-      {activeView === 'diary' && <PracticeDiary
-        appointments={appointments}
-        patients={patients}
-        onStartConsultation={handleStartConsultationFromAppointment}
-        onBookAppointment={handleBookAppointment}
-        onRequestLocum={handleRequestLocumFromDiary}
-        onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
-        onOpenTelehealth={() => setActiveView('telehealth')}
-        onOpenSwitch={() => setActiveView('switch')}
-        onOpenBillingOverview={() => setActiveView('billing')}
-        isVoiceActiveGlobal={isVoiceActive}
-        setIsVoiceActiveGlobal={setIsVoiceActive}
-        isTrialActive={true}
-        onActivateTrial={() => {}}
-      />}
-
-      {activeView === 'patients' && <PatientList
-        patients={patients}
-        onSelectPatient={handleSelectPatient}
-        onOpenOnboarding={() => setShowOnboardingModal(true)}
-        onStartConsultationForPatient={handleStartConsultationForPatient}
-        onOpenSwitchForPatient={(p) => { setSelectedPatient(p); setActiveView('switch'); }}
-      />}
-
-      {activeView === 'diagnostic' && <AIDiagnosticAssistant
-        currentPatient={selectedPatient}
-        patients={patients}
-        onSelectPatient={(p) => setSelectedPatient(p)}
-        onCommitToPatientFile={(diag, plan, meds) => {
-          if (selectedPatient) {
-            const updatedPat = { ...selectedPatient, tags: [...new Set([...selectedPatient.tags, 'AI Diagnosis Confirmed', diag.split(' ')[0]])] };
-            handleSavePatient(updatedPat);
-          }
-          if (meds.length > 0) { setPresetRxItems(meds); }
-        }}
-        onOpenPrescriptionPad={(meds) => { setPresetRxItems(meds); setActiveView('rx'); }}
-      />}
-
-      {activeView === 'consult' && <ConsultationSOAP
-        currentPatient={selectedPatient}
-        patients={patients}
-        onSelectPatient={(p) => setSelectedPatient(p)}
-        onOpenSwitchWithClaim={handleOpenSwitchWithClaim}
-        onOpenRxWithItems={handleOpenRxWithItems}
-        isVoiceActiveGlobal={isVoiceActive}
-      />}
-
-      {activeView === 'pen' && <DigitalPenCanvas
-        currentPatient={selectedPatient}
-        onApplyTranscribedNotes={handleApplyTranscribedNotes}
-      />}
-
-      {activeView === 'rx' && <PrescriptionManager
-        currentPatient={selectedPatient}
-        initialItems={presetRxItems}
-      />}
-
-      {activeView === 'switch' && <MedicalAidSwitch
-        claims={claims}
-        patients={patients}
-        onClaimCreated={handleClaimCreated}
-        presetClaimData={presetClaimData}
-      />}
-
-      {activeView === 'billing' && <BillingOverview
-        claims={claims}
-        patients={patients}
-        onOpenSwitch={() => setActiveView('switch')}
-        onSelectClaim={(claim) => { setPresetClaimData(claim); setActiveView('switch'); }}
-        isTrialActive={true}
-        onActivateTrial={() => {}}
-      />}
-
-      {activeView === 'referrals' && <ReferralsHub
-        referrals={referrals}
-        patients={patients}
-        onReferralCreated={handleReferralCreated}
-      />}
-
-      {activeView === 'telehealth' && <TelemedicineSuite
-        currentPatient={selectedPatient}
-        patients={patients}
-        onSelectPatient={(p) => setSelectedPatient(p)}
-        onBookVirtualAppointment={handleBookAppointment}
-        onOpenConsultationNotes={(p) => { setSelectedPatient(p); setActiveView('consult'); }}
-      />}
-
-      {activeView === 'locum' && <LocumTenensMarketplace
-        locumSlots={locumSlots}
-        onAddLocumSlot={handleAddLocumSlot}
-        onConfirmLocum={handleConfirmLocum}
-      />}
-
-      {activeView === 'cpd' && <DoctorCPDTracker
-        cpdCertificates={cpdCerts}
-        onAddCertificate={handleAddCertificate}
-      />}
-
-      {activeView === 'compliance' && <ComplianceAndFHIR
-        currentPatient={selectedPatient}
-        patients={patients}
-        auditLogs={auditLogs}
-      />}
-
-      {activeView === 'patient_portal' && <PatientPortalView
-        currentPatient={selectedPatient}
-        patients={patients}
-        reminders={reminders}
-        onToggleTaken={handleToggleReminderTaken}
-        onRequestRefill={handleRequestRefill}
-        onOpenTelehealth={() => setActiveView('telehealth')}
-      />}
-    </>
-  );
-}
-
-// Route Components
-function DashboardRoute() { return <Dashboard
-  appointments={appointments}
-  patients={patients}
-  consultations={consultations}
-  claims={claims}
-  locumSlots={locumSlots}
-  onStartConsultation={handleStartConsultationFromAppointment}
-  onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
-  onOpenTelehealth={() => setActiveView('telehealth')}
-  onOpenSwitch={() => setActiveView('switch')}
-  onOpenBillingOverview={() => setActiveView('billing')}
-  onOpenNewPatientModal={() => setShowOnboardingModal(true)}
-  onUpdateAppointmentStatus={(aptId, newStatus) => {
-    const apt = appointments.find((a) => a.id === aptId);
-    if (apt) handleBookAppointment({ ...apt, status: newStatus });
-  }}
-/>; }
-
-function DiaryRoute() { return <PracticeDiary
-  appointments={appointments}
-  patients={patients}
-  onStartConsultation={handleStartConsultationFromAppointment}
-  onBookAppointment={handleBookAppointment}
-  onRequestLocum={handleRequestLocumFromDiary}
-  onOpenPatientFile={(p) => { setSelectedPatient(p); setActiveView('patients'); }}
-  onOpenTelehealth={() => setActiveView('telehealth')}
-  onOpenSwitch={() => setActiveView('switch')}
-  onOpenBillingOverview={() => setActiveView('billing')}
-  isVoiceActiveGlobal={isVoiceActive}
-  setIsVoiceActiveGlobal={setIsVoiceActive}
-  isTrialActive={true}
-  onActivateTrial={() => {}}
-/>; }
-
-function PatientsRoute() { return <PatientList
-  patients={patients}
-  onSelectPatient={handleSelectPatient}
-  onOpenOnboarding={() => setShowOnboardingModal(true)}
-  onStartConsultationForPatient={handleStartConsultationForPatient}
-  onOpenSwitchForPatient={(p) => { setSelectedPatient(p); setActiveView('switch'); }}
-/>; }
-
-function DiagnosticRoute() { return <AIDiagnosticAssistant
-  currentPatient={selectedPatient}
-  patients={patients}
-  onSelectPatient={(p) => setSelectedPatient(p)}
-  onCommitToPatientFile={(diag, plan, meds) => {
-    if (selectedPatient) {
-      const updatedPat = { ...selectedPatient, tags: [...new Set([...selectedPatient.tags, 'AI Diagnosis Confirmed', diag.split(' ')[0]])] };
-      handleSavePatient(updatedPat);
-    }
-    if (meds.length > 0) { setPresetRxItems(meds); }
-  }}
-  onOpenPrescriptionPad={(meds) => { setPresetRxItems(meds); setActiveView('rx'); }}
-/>; }
-
-function ConsultRoute() { return <ConsultationSOAP
-  currentPatient={selectedPatient}
-  patients={patients}
-  onSelectPatient={(p) => setSelectedPatient(p)}
-  onOpenSwitchWithClaim={handleOpenSwitchWithClaim}
-  onOpenRxWithItems={handleOpenRxWithItems}
-  isVoiceActiveGlobal={isVoiceActive}
-/>; }
-
-function PenRoute() { return <DigitalPenCanvas
-  currentPatient={selectedPatient}
-  onApplyTranscribedNotes={handleApplyTranscribedNotes}
-/>; }
-
-function RxRoute() { return <PrescriptionManager
-  currentPatient={selectedPatient}
-  initialItems={presetRxItems}
-/>; }
-
-function SwitchRoute() { return <MedicalAidSwitch
-  claims={claims}
-  patients={patients}
-  onClaimCreated={handleClaimCreated}
-  presetClaimData={presetClaimData}
-/>; }
-
-function BillingRoute() { return <BillingOverview
-  claims={claims}
-  patients={patients}
-  onOpenSwitch={() => setActiveView('switch')}
-  onSelectClaim={(claim) => { setPresetClaimData(claim); setActiveView('switch'); }}
-  isTrialActive={true}
-  onActivateTrial={() => {}}
-/>; }
-
-function ReferralsRoute() { return <ReferralsHub
-  referrals={referrals}
-  patients={patients}
-  onReferralCreated={handleReferralCreated}
-/>; }
-
-function TelehealthRoute() { return <TelemedicineSuite
-  currentPatient={selectedPatient}
-  patients={patients}
-  onSelectPatient={(p) => setSelectedPatient(p)}
-  onBookVirtualAppointment={handleBookAppointment}
-  onOpenConsultationNotes={(p) => { setSelectedPatient(p); setActiveView('consult'); }}
-/>; }
-
-function LocumRoute() { return <LocumTenensMarketplace
-  locumSlots={locumSlots}
-  onAddLocumSlot={handleAddLocumSlot}
-  onConfirmLocum={handleConfirmLocum}
-/>; }
-
-function CPDRoute() { return <DoctorCPDTracker
-  cpdCertificates={cpdCerts}
-  onAddCertificate={handleAddCertificate}
-/>; }
-
-function ComplianceRoute() { return <ComplianceAndFHIR
-  currentPatient={selectedPatient}
-  patients={patients}
-  auditLogs={auditLogs}
-/>; }
-
-function PatientPortalRoute() { return <PatientPortalView
-  currentPatient={selectedPatient}
-  patients={patients}
-  reminders={reminders}
-  onToggleTaken={handleToggleReminderTaken}
-  onRequestRefill={handleRequestRefill}
-  onOpenTelehealth={() => setActiveView('telehealth')}
-/>; }
-
-function GlobalModals() {
-  return (
-    <>
-      <PatientOnboardingModal
-        isOpen={showOnboardingModal}
-        onClose={() => setShowOnboardingModal(false)}
-        onSavePatient={handleSavePatient}
-      />
-      <ModelSwitcherModal
-        isOpen={showModelSwitcher}
-        onClose={() => setShowModelSwitcher(false)}
-        activeModel={activeAIModel}
-        onSelectModel={(m) => { setActiveAIModel(m); }}
-      />
-      <DoctorVoiceAssistantModal
-        isOpen={showVoiceModal}
-        onClose={() => setShowVoiceModal(false)}
-        optInSettings={voiceOptInSettings}
-        onUpdateSettings={(newSettings) => setVoiceOptInSettings(newSettings)}
-        activePatient={selectedPatient}
-        patients={patients}
-        appointments={appointments}
-        onTriggerSpokenReminder={(text) => setLastSpokenReminder(text)}
-      />
-      <DoctorVoiceFloatingHUD
-        optInSettings={voiceOptInSettings}
-        onOpenModal={() => setShowVoiceModal(true)}
-        lastSpokenReminder={lastSpokenReminder}
-        onDismissReminder={() => setLastSpokenReminder(null)}
-        isSpeaking={isVoiceAssistantSpeaking}
-        onStopSpeaking={() => {
-          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-          }
-          setIsVoiceAssistantSpeaking(false);
-        }}
-        onQuickReplay={() => {
-          if (lastSpokenReminder) triggerVoiceReminder(lastSpokenReminder);
-        }}
-      />
-    </>
   );
 }
 
